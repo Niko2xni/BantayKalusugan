@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "BantayKalusugan-Frontend",
+			"path": "../BantayKalusugan-Frontend"
+		}
+	],
+	"settings": {}
+}
