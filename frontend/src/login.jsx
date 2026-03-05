@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, MapPin, Phone, Facebook, Twitter, Instagram, Menu, X } from "lucide-react";
 import "./login.css";
-import logo from "./assets/logo.png";
+import logo from "./assets/logo.svg";
 
 const bgImage = "https://cdn.britannica.com/81/196781-050-CA29F2C8/Manila.jpg";
 const NAV_LINKS = ["Home", "Services", "About Us"];
@@ -96,6 +96,7 @@ export default function Login() {
     }
     setError("");
     alert("Login clicked!");
+    navigate("/dashboard");
   };
 
   return (

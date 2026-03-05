@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import "./register.css";
 import "./login.css";
-import logo from "./assets/logo.png";
+import logo from "./assets/logo.svg";
 
 const bgImage = "https://cdn.britannica.com/81/196781-050-CA29F2C8/Manila.jpg";
 const NAV_LINKS = ["Home", "Services", "About Us"];

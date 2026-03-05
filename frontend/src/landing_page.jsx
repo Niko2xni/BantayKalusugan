@@ -6,7 +6,7 @@ import {
   Home, BookOpen, PhoneCall, AlertCircle, Baby, Pill, Stethoscope,
   Menu, X, Facebook, Twitter, Instagram, MapPin, Phone, Mail,
 } from "lucide-react";
-import logo from "./assets/logo.png";
+import logo from "./assets/logo.svg";
 
 // ── Images ──────────────────────────────────────────────────────────────────
 const heroImage =
