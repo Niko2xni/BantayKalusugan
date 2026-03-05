@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Activity, Users, BarChart2, ClipboardList, CheckCircle,
   ArrowRight, Heart, Database, Monitor, Thermometer, Scale,
   Home, BookOpen, PhoneCall, AlertCircle, Baby, Pill, Stethoscope,
-  Menu, X,
+  Menu, X, Facebook, Twitter, Instagram, MapPin, Phone, Mail,
 } from "lucide-react";
+import logo from "./assets/logo.png";
 
+// ── Images ──────────────────────────────────────────────────────────────────
 const heroImage =
-  "https://images.unsplash.com/photo-1697111314630-8db2d3f5187d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1400&q=80";
+  "https://cdn.britannica.com/81/196781-050-CA29F2C8/Manila.jpg";
 const healthWorkersImage =
   "https://images.unsplash.com/photo-1609126385558-bc3fc5082b0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080&q=80";
 const bhwImage =
@@ -19,6 +22,7 @@ const maternalImage =
 const digitalHealthImage =
   "https://images.unsplash.com/photo-1691934310598-27528df21f9c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080&q=80";
 
+// ── Static Data ──────────────────────────────────────────────────────────────
 const NAV_LINKS = ["Home", "Services", "About Us"];
 
 const STATS = [
@@ -68,6 +72,40 @@ const DIGITAL_METRICS = [
   { label: "Records Secured",  value: "100%",     color: "blue" },
 ];
 
+const ROLES = [
+  {
+    role: "Admin / Barangay Staff",
+    short: "Admin",
+    icon: <Monitor size={22} />,
+    color: "#2E5895",
+    bg: "#f0f4fb",
+    border: "#d0ddf0",
+    features: [
+      "Manage patient profiles and health records",
+      "Review and verify BHW-encoded vital signs",
+      "Generate community health reports",
+      "Oversee referrals to health facilities",
+      "Monitor BHW home visit schedules",
+    ],
+  },
+  {
+    role: "Patient / Community Member",
+    short: "Patient",
+    icon: <Users size={22} />,
+    color: "#b8820a",
+    bg: "#fffbf0",
+    border: "#f0e0a0",
+    features: [
+      "View personal vital signs history",
+      "Track health trends over time",
+      "Access immunization and check-up records",
+      "Receive referral notifications",
+      "Monitor TB treatment compliance status",
+    ],
+  },
+];
+
+// ── Reusable Image Component ─────────────────────────────────────────────────
 function Img({ src, alt, className }) {
   const [err, setErr] = useState(false);
   return err
@@ -75,7 +113,9 @@ function Img({ src, alt, className }) {
     : <img src={src} alt={alt} className={className} onError={() => setErr(true)} />;
 }
 
+// ── Navbar Component ─────────────────────────────────────────────────────────
 function Navbar({ scrolled }) {
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const scrollTo = (id) => {
@@ -98,7 +138,7 @@ function Navbar({ scrolled }) {
     <>
       <nav className={`navbar${scrolled ? " navbar--scrolled" : ""}`}>
         <div className="navbar__logo">
-          <div className="navbar__logo-icon" />
+           <img src={logo} alt="logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
           <span className="navbar__logo-text">BantayKalusugan</span>
         </div>
 
@@ -114,7 +154,9 @@ function Navbar({ scrolled }) {
             );
           })}
           <li>
-            <button className="btn btn--outline-navy btn--sm">Log In</button>
+            <button className="btn btn--outline-navy btn--sm" onClick={() => navigate("/login")}>
+              Log In
+            </button>
           </li>
         </ul>
 
@@ -137,7 +179,7 @@ function Navbar({ scrolled }) {
               );
             })}
           </ul>
-          <button className="btn btn--outline-navy btn--full" onClick={() => setMenuOpen(false)}>
+          <button className="btn btn--outline-navy btn--full" onClick={() => navigate("/login")}>
             Log In
           </button>
         </div>
@@ -146,40 +188,9 @@ function Navbar({ scrolled }) {
   );
 }
 
-function Footer() {
-  return (
-    <footer className="footer">
-      <div className="footer__inner">
-        <div className="footer__brand">
-          <div className="footer__brand-name">BantayKalusugan</div>
-          <p className="footer__brand-desc">
-            Empowering Barangay Health Workers with digital tools to bridge communities to better healthcare.
-          </p>
-        </div>
-        <div className="footer__cols">
-          {[
-            { heading: "Platform", links: ["Home", "Services", "About Us", "Log In"] },
-            { heading: "Services", links: ["Vital Signs", "Home Visits", "TB Monitoring", "Maternal Health"] },
-          ].map((col) => (
-            <div key={col.heading} className="footer__col">
-              <div className="footer__col-heading">{col.heading}</div>
-              <ul className="footer__col-list">
-                {col.links.map((l) => (
-                  <li key={l}><a href="#" className="footer__col-link">{l}</a></li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="footer__copy">
-        © {new Date().getFullYear()} BantayKalusugan. All rights reserved.
-      </div>
-    </footer>
-  );
-}
-
-export default function Landing() {
+// ── Main Landing Page ─────────────────────────────────────────────────────────
+export default function LandingPage() {
+  const navigate = useNavigate();
   const [scrolled,    setScrolled]    = useState(false);
   const [heroVisible, setHeroVisible] = useState(false);
 
@@ -194,8 +205,11 @@ export default function Landing() {
 
   return (
     <div className="page">
+
+      {/* Section 1 – Navbar */}
       <Navbar scrolled={scrolled} />
 
+      {/* Section 2 – Hero */}
       <section id="home" className="hero">
         <div className="hero__bg">
           <Img src={heroImage} alt="Philippine community aerial view" className="hero__bg-img" />
@@ -216,7 +230,7 @@ export default function Landing() {
             manage home visits, monitor TB compliance, and bridge communities to better healthcare.
           </p>
           <div className="hero__actions">
-            <button className="btn btn--gold">Get Started</button>
+            <button className="btn btn--gold" onClick={() => navigate("/login")}>Get Started</button>
             <button className="btn btn--outline-white" onClick={() => scrollTo("about")}>Learn More</button>
           </div>
         </div>
@@ -234,6 +248,7 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Section 3 – About */}
       <section id="about" className="section section--white">
         <div className="container">
           <div className="two-col">
@@ -281,6 +296,7 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Section 4 – BHW Duties */}
       <section id="bhw" className="section section--grey">
         <div className="container">
           <div className="two-col">
@@ -325,6 +341,7 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Section 5 – Vital Signs */}
       <section className="section section--white">
         <div className="container">
           <div className="two-col">
@@ -360,6 +377,7 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Section 6 – Maternal & TB */}
       <section className="section section--grey">
         <div className="container">
           <div className="card-grid card-grid--2">
@@ -412,6 +430,7 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Section 7 – Services */}
       <section id="services" className="section section--white">
         <div className="container">
           <div className="section-header">
@@ -436,6 +455,7 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Section 8 – How It Works */}
       <section className="section section--grey">
         <div className="container">
           <div className="section-header">
@@ -461,7 +481,56 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="section section--white">
+        {/* Section 9 – User Roles */}
+        <section className="section section--white">
+            <div className="container">
+                <div className="section-header">
+                    <span className="badge badge--blue">Platform Roles</span>
+                    <h2 className="section__title">
+                        Designed for Every
+                        <span className="text--blue"> Healthcare Role</span>
+                    </h2>
+                    <p className="section-header__sub">
+                        Two user types: Barangay staff manage the digital system, while patients access their personal health records.
+                    </p>
+                </div>
+
+                <div className="card-grid card-grid--2" style={{ maxWidth: "860px", margin: "0 auto" }}>
+                    {ROLES.map((role) => (
+                        <div
+                                key={role.role}
+                                className="card"
+                                style={{ backgroundColor: role.bg, border: `1px solid ${role.border}` }}
+                            >
+                            <div
+                                className="card__icon"
+                                style={{ backgroundColor: `${role.color}20`, color: role.color }}
+                            >
+                                {role.icon}
+                            </div>
+                            <span
+                                className="badge"
+                                style={{ backgroundColor: `${role.color}20`, color: role.color }}
+                            >
+                                {role.short}
+                            </span>
+                            <h3 className="card__title" style={{ fontSize: "1rem" }}>{role.role}</h3>
+                            <ul className="check-list" style={{ marginTop: "8px" }}>
+                                {role.features.map((f) => (
+                                <li key={f}>
+                                    <CheckCircle size={13} style={{ color: role.color, marginTop: "2px", flexShrink: 0 }} />
+                                    {f}
+                                </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+
+      {/* Section 10 – Digital Records */}
+      <section className="section section--grey">
         <div className="container">
           <div className="two-col two-col--reversed">
             <div className="two-col__media">
@@ -494,6 +563,7 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Section 11 – CTA */}
       <section className="cta-section">
         <div className="container cta-section__inner">
           <h2 className="cta-section__title">
@@ -505,7 +575,7 @@ export default function Landing() {
             already using BantayKalusugan to digitize their community health monitoring.
           </p>
           <div className="cta-section__actions">
-            <button className="btn btn--gold">Log In Now</button>
+            <button className="btn btn--gold" onClick={() => navigate("/login")}>Log In Now</button>
             <button className="btn btn--outline-white" onClick={() => scrollTo("bhw")}>
               Learn About BHWs
             </button>
@@ -513,7 +583,88 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Section 12 – Footer */}
       <Footer />
+
     </div>
+  );
+}
+// ── Footer Component ─────────────────────────────────────────────────────────
+function Footer() {
+  return (
+    <footer className="footer">
+      <div className="footer-container">
+        <div className="footer-grid">
+
+          {/* Brand Column */}
+          <div className="footer-brand">
+                <div className="footer-brand-logo">
+                        <img src={logo} alt="logo" style={{ width: "24px", height: "24px", objectFit: "contain" }} />
+                    <div className="footer-brand-name">
+                        <span className="brand-primary">Bantay</span>
+                        <span className="brand-accent">Kalusugan</span>
+                    </div>
+                </div>
+                <p className="footer-brand-desc">
+                    A web-based patient monitoring platform for barangay-level health
+                    data management and community wellness tracking.
+                </p>
+          </div>
+
+          {/* Our Services Column */}
+          <div>
+            <p className="footer-col-title">Our Services</p>
+            <ul className="footer-link-list">
+              {["Blood Pressure Monitoring", "Health Record Management", "Health Trend Analysis"].map((l) => (
+                <li key={l}><a href="#">{l}</a></li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Quick Links Column */}
+          <div>
+            <p className="footer-col-title">Quick Links</p>
+            <ul className="footer-link-list">
+              {["Home", "Services", "About Us", "Contact"].map((l) => (
+                <li key={l}><a href="#">{l}</a></li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact Column */}
+          <div>
+            <p className="footer-col-title">Contact Us</p>
+            <ul className="footer-contact-list">
+              <li className="footer-contact-item">
+                <MapPin size={15} className="footer-contact-icon" />
+                <span className="footer-contact-text">
+                  Barangay Health Center,<br />Sample Barangay, City, Philippines
+                </span>
+              </li>
+              <li className="footer-contact-item">
+                <Phone size={15} className="footer-contact-icon" />
+                <span className="footer-contact-text">+63 912 345 6789</span>
+              </li>
+              <li className="footer-contact-item">
+                <Mail size={15} className="footer-contact-icon" />
+                <span className="footer-contact-text">info@bantaykalusugan.ph</span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        {/* Divider + Copyright */}
+        <div className="footer-divider">
+          <p className="footer-copyright">
+            © {new Date().getFullYear()} BantayKalusugan. All rights reserved.
+          </p>
+          <div className="footer-bottom-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+          </div>
+        </div>
+      </div>
+    </footer>
   );
 }
