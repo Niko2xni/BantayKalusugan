@@ -1,6 +1,7 @@
+import styles from './user_dashboard.module.css';
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import './user_dashboard.css';
+
 import { 
   LayoutDashboard, Activity, MessageSquare, 
   Calendar, Info, Heart 
@@ -16,25 +17,25 @@ const UserDashboard = () => {
   ];
 
   return (
-    <div className="page">
+    <div className={styles['page']}>
       {/* NAVBAR */}
-      <nav className="navbar">
-        <div className="navbar__logo">
-          <div className="navbar__logo-icon"></div>
+      <nav className={styles['navbar']}>
+        <div className={styles['navbar__logo']}>
+          <div className={styles['navbar__logo-icon']}></div>
           <span>BantayKalusugan</span>
         </div>
-        <div className="navbar__menu">
-          <ul className="navbar__links navbar__links--desktop">
-            <li><Link to="/" className="navbar__link">Home</Link></li>
-            <li><a href="/#services" className="navbar__link">Services</a></li>
-            <li><a href="/#about" className="navbar__link">About Us</a></li>
+        <div className={styles['navbar__menu']}>
+          <ul className={`${styles['navbar__links']} ${styles['navbar__links--desktop']}`}>
+            <li><Link to="/" className={styles['navbar__link']}>Home</Link></li>
+            <li><a href="/#services" className={styles['navbar__link']}>Services</a></li>
+            <li><a href="/#about" className={styles['navbar__link']}>About Us</a></li>
           </ul>
-          <button type="button" className="btn btn--outline-navy btn--sm" onClick={() => navigate('/login')}>Log Out</button>
+          <button type="button" className={`${styles['btn']} ${styles['btn--outline-navy']} ${styles['btn--sm']}`} onClick={() => navigate('/login')}>Log Out</button>
         </div>
       </nav>
 
       {/* SIDEBAR */}
-      <aside className="sidebar">
+      <aside className={styles['sidebar']}>
         <NavItem icon={<LayoutDashboard />} label="Dashboard" />
         <NavItem icon={<Activity />} label="Analytics" />
         <NavItem icon={<MessageSquare />} label="Chat" />
@@ -43,59 +44,59 @@ const UserDashboard = () => {
       </aside>
 
       {/* TOP STATS BAR
-      <div className="hero__stats-bar">
-        <div className="stats-grid">
+      <div className={styles['hero__stats-bar']}>
+        <div className={styles['stats-grid']}>
           {summaryData.map((item, idx) => (
-            <div key={idx} className="stat-item">
-              <span className="stat-item__value">{item.title}</span>
-              <span className="stat-item__label">{item.sub}</span>
+            <div key={idx} className={styles['stat-item']}>
+              <span className={styles['stat-item__value']}>{item.title}</span>
+              <span className={styles['stat-item__label']}>{item.sub}</span>
             </div>
           ))}
         </div>
       </div> */}
 
       {/* HERO SECTION */}
-      <section className="hero">
-        <div className="hero__content hero__content--visible">
-          <h2 className="hero__title">Hello, <span className="hero__title--gold">Full Name</span></h2>
-          <p className="hero__desc">Lorem ipsum dolor sit amet</p>
+      <section className={styles['hero']}>
+        <div className={`${styles['hero__content']} ${styles['hero__content--visible']}`}>
+          <h2 className={styles['hero__title']}>Hello, <span className={styles['hero__title--gold']}>Full Name</span></h2>
+          <p className={styles['hero__desc']}>Lorem ipsum dolor sit amet</p>
         </div>
       </section>
 
       {/* MAIN CONTENT */}
-      <div className="container">
+      <div className={styles['container']}>
         {/* METRICS CARDS */}
-        <section className="section section--white">
-          <div className="card-grid card-grid--4">
+        <section className={`${styles['section']} ${styles['section--white']}`}>
+          <div className={`${styles['card-grid']} ${styles['card-grid--4']}`}>
             {summaryData.map((item, idx) => (
-              <div key={idx} className="card">
-                <div className="card__icon" style={{ backgroundColor: item.color }}>
+              <div key={idx} className={styles['card']}>
+                <div className={styles['card__icon']} style={{ backgroundColor: item.color }}>
                   {item.icon}
                 </div>
-                <h3 className="card__title">{item.title}</h3>
-                <p className="card__desc">{item.sub}</p>
-                <p className="card__desc" style={{ fontSize: '0.70rem', marginTop: '4px' }}>{item.date}</p>
+                <h3 className={styles['card__title']}>{item.title}</h3>
+                <p className={styles['card__desc']}>{item.sub}</p>
+                <p className={styles['card__desc']} style={{ fontSize: '0.70rem', marginTop: '4px' }}>{item.date}</p>
               </div>
             ))}
           </div>
         </section>
 
         {/* LATEST VITALS */}
-        <section className="section section--grey">
-          <div className="subsection-header">
-            <h3 className="subsection-header__title">Latest Vitals</h3>
-            <a href="#" className="card-grid__link">View all</a>
+        <section className={`${styles['section']} ${styles['section--grey']}`}>
+          <div className={styles['subsection-header']}>
+            <h3 className={styles['subsection-header__title']}>Latest Vitals</h3>
+            <a href="#" className={styles['card-grid__link']}>View all</a>
           </div>
-          <div className="card-grid card-grid--3">
-            <div className="card">
-              <div className="card__icon icon--red" style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}>
+          <div className={`${styles['card-grid']} ${styles['card-grid--3']}`}>
+            <div className={styles['card']}>
+              <div className={`${styles['card__icon']} ${styles['icon--red']}`} style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}>
                 <Heart size={20} fill="currentColor" />
               </div>
-              <h4 className="card__title">Heading 1</h4>
-              <span className="badge badge--red">Warning</span>
+              <h4 className={styles['card__title']}>Heading 1</h4>
+              <span className={`${styles['badge']} ${styles['badge--red']}`}>Warning</span>
             </div>
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="card" style={{ minHeight: '160px' }} />
+              <div key={i} className={styles['card']} style={{ minHeight: '160px' }} />
             ))}
           </div>
         </section>
@@ -105,7 +106,7 @@ const UserDashboard = () => {
 };
 
 const NavItem = ({ icon, label }) => (
-  <div className="sidebar__item">
+  <div className={styles['sidebar__item']}>
     {React.cloneElement(icon, { size: 24 })}
     <span>{label}</span>
   </div>

@@ -1,3 +1,4 @@
+import styles from './landing_page.module.css';
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -109,7 +110,7 @@ const ROLES = [
 function Img({ src, alt, className }) {
   const [err, setErr] = useState(false);
   return err
-    ? <div className={`img-fallback ${className}`} />
+    ? <div className={`${styles["img-fallback"]} ${className}`} />
     : <img src={src} alt={alt} className={className} onError={() => setErr(true)} />;
 }
 
@@ -136,50 +137,50 @@ function Navbar({ scrolled }) {
 
   return (
     <>
-      <nav className={`navbar${scrolled ? " navbar--scrolled" : ""}`}>
-        <div className="navbar__logo">
+      <nav className={`${styles.navbar} ${scrolled ? styles["navbar--scrolled"] : ""}`}>
+        <div className={styles['navbar__logo']}>
            <img src={logo} alt="logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-          <span className="navbar__logo-text">BantayKalusugan</span>
+          <span className={styles['navbar__logo-text']}>BantayKalusugan</span>
         </div>
 
-        <ul className="navbar__links navbar__links--desktop">
+        <ul className={`${styles['navbar__links']} ${styles['navbar__links--desktop']}`}>
           {NAV_LINKS.map((link) => {
             const idMap = { Home: "home", Services: "services", "About Us": "about" };
             return (
               <li key={link}>
-                <a href="#" className="navbar__link" onClick={(e) => { e.preventDefault(); scrollTo(idMap[link]); }}>
+                <a href="#" className={styles['navbar__link']} onClick={(e) => { e.preventDefault(); scrollTo(idMap[link]); }}>
                   {link}
                 </a>
               </li>
             );
           })}
           <li>
-            <button className="btn btn--outline-navy btn--sm" onClick={() => navigate("/login")}>
+            <button className={`${styles['btn']} ${styles['btn--outline-navy']} ${styles['btn--sm']}`} onClick={() => navigate("/login")}>
               Log In
             </button>
           </li>
         </ul>
 
-        <button className="navbar__hamburger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
+        <button className={styles['navbar__hamburger']} onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </nav>
 
       {menuOpen && (
-        <div className="mobile-menu">
-          <ul className="mobile-menu__links">
+        <div className={styles['mobile-menu']}>
+          <ul className={styles['mobile-menu__links']}>
             {NAV_LINKS.map((link) => {
               const idMap = { Home: "home", Services: "services", "About Us": "about" };
               return (
                 <li key={link}>
-                  <a href="#" className="mobile-menu__link" onClick={(e) => { e.preventDefault(); scrollTo(idMap[link]); }}>
+                  <a href="#" className={styles['mobile-menu__link']} onClick={(e) => { e.preventDefault(); scrollTo(idMap[link]); }}>
                     {link}
                   </a>
                 </li>
               );
             })}
           </ul>
-          <button className="btn btn--outline-navy btn--full" onClick={() => navigate("/login")}>
+          <button className={`${styles['btn']} ${styles['btn--outline-navy']} ${styles['btn--full']}`} onClick={() => navigate("/login")}>
             Log In
           </button>
         </div>
@@ -204,43 +205,43 @@ export default function LandingPage() {
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
   return (
-    <div className="page">
+    <div className={styles['page']}>
 
       {/* Section 1 – Navbar */}
       <Navbar scrolled={scrolled} />
 
       {/* Section 2 – Hero */}
-      <section id="home" className="hero">
-        <div className="hero__bg">
-          <Img src={heroImage} alt="Philippine community aerial view" className="hero__bg-img" />
-          <div className="hero__overlay" />
+      <section id="home" className={styles['hero']}>
+        <div className={styles['hero__bg']}>
+          <Img src={heroImage} alt="Philippine community aerial view" className={styles['hero__bg-img']} />
+          <div className={styles['hero__overlay']} />
         </div>
-        <div className={`hero__content${heroVisible ? " hero__content--visible" : ""}`}>
-          <div className="hero__badge">
+        <div className={`${styles.hero__content} ${heroVisible ? styles["hero__content--visible"] : ""}`}>
+          <div className={styles['hero__badge']}>
             <Activity size={13} />
             Barangay Community Health Monitoring Platform
           </div>
-          <h1 className="hero__title">
+          <h1 className={styles['hero__title']}>
             Empowering BHWs &amp;
-            <span className="hero__title--gold"> Communities</span>
+            <span className={styles['hero__title--gold']}> Communities</span>
             <br />Through Smart Health Monitoring
           </h1>
-          <p className="hero__desc">
+          <p className={styles['hero__desc']}>
             BantayKalusugan equips Barangay Health Workers with digital tools to record vital signs,
             manage home visits, monitor TB compliance, and bridge communities to better healthcare.
           </p>
-          <div className="hero__actions">
-            <button className="btn btn--gold" onClick={() => navigate("/login")}>Get Started</button>
-            <button className="btn btn--outline-white" onClick={() => scrollTo("about")}>Learn More</button>
+          <div className={styles['hero__actions']}>
+            <button className={`${styles['btn']} ${styles['btn--gold']}`} onClick={() => navigate("/login")}>Get Started</button>
+            <button className={`${styles['btn']} ${styles['btn--outline-white']}`} onClick={() => scrollTo("about")}>Learn More</button>
           </div>
         </div>
-        <div className="hero__stats-bar">
-          <div className="container">
-            <div className="stats-grid">
+        <div className={styles['hero__stats-bar']}>
+          <div className={styles['container']}>
+            <div className={styles['stats-grid']}>
               {STATS.map((s) => (
-                <div key={s.label} className="stat-item">
-                  <span className="stat-item__value">{s.value}</span>
-                  <span className="stat-item__label">{s.label}</span>
+                <div key={s.label} className={styles['stat-item']}>
+                  <span className={styles['stat-item__value']}>{s.value}</span>
+                  <span className={styles['stat-item__label']}>{s.label}</span>
                 </div>
               ))}
             </div>
@@ -249,14 +250,14 @@ export default function LandingPage() {
       </section>
 
       {/* Section 3 – About */}
-      <section id="about" className="section section--white">
-        <div className="container">
-          <div className="two-col">
-            <div className="two-col__media">
-              <div className="media-card">
-                <Img src={healthWorkersImage} alt="Community healthcare workers" className="media-card__img" />
+      <section id="about" className={`${styles['section']} ${styles['section--white']}`}>
+        <div className={styles['container']}>
+          <div className={styles['two-col']}>
+            <div className={styles['two-col__media']}>
+              <div className={styles['media-card']}>
+                <Img src={healthWorkersImage} alt="Community healthcare workers" className={styles['media-card__img']} />
               </div>
-              <div className="media-badge">
+              <div className={styles['media-badge']}>
                 <CheckCircle size={18} />
                 <div>
                   <strong>62 Active BHWs</strong>
@@ -264,31 +265,31 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <div className="two-col__text">
-              <span className="badge badge--blue">About BantayKalusugan</span>
-              <h2 className="section__title">
+            <div className={styles['two-col__text']}>
+              <span className={`${styles['badge']} ${styles['badge--blue']}`}>About BantayKalusugan</span>
+              <h2 className={styles['section__title']}>
                 Digitizing Barangay-Level
-                <span className="text--blue"> Health Management</span>
+                <span className={styles['text--blue']}> Health Management</span>
               </h2>
-              <p className="body-text">
+              <p className={styles['body-text']}>
                 The rapid advancement of digital technology has transformed how communities manage and
                 deliver essential services, including healthcare. As local government units strive to
                 improve efficiency, the integration of web-based systems into community health management
                 has become increasingly relevant.
               </p>
-              <p className="body-text">
+              <p className={styles['body-text']}>
                 Traditional paper-based methods of recording and monitoring patient health data are often
                 prone to errors, difficult to retrieve, and inefficient. At the barangay level, BHWs
                 regularly conduct health monitoring including blood pressure measurement, height/weight
                 checks, and disease surveillance.
               </p>
-              <p className="body-text">
+              <p className={styles['body-text']}>
                 BantayKalusugan is a web-based patient monitoring platform designed to bridge the gap
                 between community health data collection and digital record management.
               </p>
-              <div className="tag-list">
+              <div className={styles['tag-list']}>
                 {["Vital Signs Monitoring", "Digital Records", "TB Compliance", "Maternal Health", "Referral System"].map((tag) => (
-                  <span key={tag} className="tag">{tag}</span>
+                  <span key={tag} className={styles['tag']}>{tag}</span>
                 ))}
               </div>
             </div>
@@ -297,44 +298,44 @@ export default function LandingPage() {
       </section>
 
       {/* Section 4 – BHW Duties */}
-      <section id="bhw" className="section section--grey">
-        <div className="container">
-          <div className="two-col">
-            <div className="two-col__text">
-              <span className="badge badge--red">Barangay Health Workers (BHWs)</span>
-              <h2 className="section__title">
+      <section id="bhw" className={`${styles['section']} ${styles['section--grey']}`}>
+        <div className={styles['container']}>
+          <div className={styles['two-col']}>
+            <div className={styles['two-col__text']}>
+              <span className={`${styles['badge']} ${styles['badge--red']}`}>Barangay Health Workers (BHWs)</span>
+              <h2 className={styles['section__title']}>
                 The Frontline of
-                <span className="text--red"> Community Healthcare</span>
+                <span className={styles['text--red']}> Community Healthcare</span>
               </h2>
-              <p className="body-text">
+              <p className={styles['body-text']}>
                 Barangay Health Workers (BHWs) in the Philippines are <strong>accredited volunteers</strong> who
                 act as the primary bridge between community members and the formal health system. They focus on
                 preventive care, health education, and continuous disease monitoring at the household level.
               </p>
-              <p className="body-text">
+              <p className={styles['body-text']}>
                 BantayKalusugan provides BHWs with a dedicated digital platform to record vital signs, log home
                 visits, monitor TB treatment compliance, manage maternal and child health data, and generate
                 referrals — all from a single, easy-to-use interface.
               </p>
             </div>
-            <div className="two-col__media">
-              <div className="media-card">
-                <Img src={bhwImage} alt="Barangay health worker" className="media-card__img" />
+            <div className={styles['two-col__media']}>
+              <div className={styles['media-card']}>
+                <Img src={bhwImage} alt="Barangay health worker" className={styles['media-card__img']} />
               </div>
             </div>
           </div>
-          <div className="subsection-header">
-            <h3 className="subsection-header__title">Key Duties &amp; Responsibilities</h3>
-            <p className="subsection-header__sub">
+          <div className={styles['subsection-header']}>
+            <h3 className={styles['subsection-header__title']}>Key Duties &amp; Responsibilities</h3>
+            <p className={styles['subsection-header__sub']}>
               BantayKalusugan is built to support every core function of a BHW's daily work
             </p>
           </div>
-          <div className="card-grid card-grid--3">
+          <div className={`${styles['card-grid']} ${styles['card-grid--3']}`}>
             {BHW_DUTIES.map((d) => (
-              <div key={d.title} className="card">
-                <div className={`card__icon icon--${d.color}`}>{d.icon}</div>
-                <h4 className="card__title">{d.title}</h4>
-                <p className="card__desc">{d.desc}</p>
+              <div key={d.title} className={styles['card']}>
+                <div className={`${styles.card__icon} ${styles[`icon--${d.color}`]}`}>{d.icon}</div>
+                <h4 className={styles['card__title']}>{d.title}</h4>
+                <p className={styles['card__desc']}>{d.desc}</p>
               </div>
             ))}
           </div>
@@ -342,35 +343,35 @@ export default function LandingPage() {
       </section>
 
       {/* Section 5 – Vital Signs */}
-      <section className="section section--white">
-        <div className="container">
-          <div className="two-col">
-            <div className="two-col__text">
-              <span className="badge badge--gold">Complete Vital Signs Monitoring</span>
-              <h2 className="section__title">
+      <section className={`${styles['section']} ${styles['section--white']}`}>
+        <div className={styles['container']}>
+          <div className={styles['two-col']}>
+            <div className={styles['two-col__text']}>
+              <span className={`${styles['badge']} ${styles['badge--gold']}`}>Complete Vital Signs Monitoring</span>
+              <h2 className={styles['section__title']}>
                 Beyond Blood Pressure —
-                <span className="text--blue"> Full Patient Assessment</span>
+                <span className={styles['text--blue']}> Full Patient Assessment</span>
               </h2>
-              <p className="body-text">
+              <p className={styles['body-text']}>
                 BHWs use BantayKalusugan to record a <strong>complete set of vital signs</strong> for every
                 patient during community check-ups and home visits. This holistic approach enables early
                 detection of health issues and better-informed referrals to local health centers.
               </p>
-              <div className="vital-grid">
+              <div className={styles['vital-grid']}>
                 {VITAL_SIGNS.map((vs) => (
-                  <div key={vs.label} className="vital-item">
-                    <div className={`vital-item__icon icon--${vs.color}`}>{vs.icon}</div>
+                  <div key={vs.label} className={styles['vital-item']}>
+                    <div className={`${styles["vital-item__icon"]} ${styles[`icon--${vs.color}`]}`}>{vs.icon}</div>
                     <div>
-                      <p className="vital-item__label">{vs.label}</p>
-                      <p className="vital-item__unit">{vs.unit}</p>
+                      <p className={styles['vital-item__label']}>{vs.label}</p>
+                      <p className={styles['vital-item__unit']}>{vs.unit}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="two-col__media">
-              <div className="media-card">
-                <Img src={vitalSignsImage} alt="Vital signs monitoring" className="media-card__img" />
+            <div className={styles['two-col__media']}>
+              <div className={styles['media-card']}>
+                <Img src={vitalSignsImage} alt="Vital signs monitoring" className={styles['media-card__img']} />
               </div>
             </div>
           </div>
@@ -378,48 +379,48 @@ export default function LandingPage() {
       </section>
 
       {/* Section 6 – Maternal & TB */}
-      <section className="section section--grey">
-        <div className="container">
-          <div className="card-grid card-grid--2">
-            <div className="feature-card">
-              <div className="feature-card__img-wrap">
-                <Img src={maternalImage} alt="Maternal child health" className="feature-card__img" />
+      <section className={`${styles['section']} ${styles['section--grey']}`}>
+        <div className={styles['container']}>
+          <div className={`${styles['card-grid']} ${styles['card-grid--2']}`}>
+            <div className={styles['feature-card']}>
+              <div className={styles['feature-card__img-wrap']}>
+                <Img src={maternalImage} alt="Maternal child health" className={styles['feature-card__img']} />
               </div>
-              <div className="feature-card__body">
-                <div className="feature-card__meta">
-                  <div className="icon--red"><Baby size={18} /></div>
-                  <span className="badge badge--red">Maternal &amp; Child Health</span>
+              <div className={styles['feature-card__body']}>
+                <div className={styles['feature-card__meta']}>
+                  <div className={styles['icon--red']}><Baby size={18} /></div>
+                  <span className={`${styles['badge']} ${styles['badge--red']}`}>Maternal &amp; Child Health</span>
                 </div>
-                <h3 className="feature-card__title">Protecting Mothers &amp; Children</h3>
-                <p className="feature-card__desc">
+                <h3 className={styles['feature-card__title']}>Protecting Mothers &amp; Children</h3>
+                <p className={styles['feature-card__desc']}>
                   BHWs monitor prenatal check-up schedules, immunization compliance, birth planning, and
                   child growth milestones. BantayKalusugan digitizes these records for easy tracking and
                   timely intervention.
                 </p>
-                <ul className="check-list check-list--red">
+                <ul className={`${styles['check-list']} ${styles['check-list--red']}`}>
                   {["Immunization schedule tracking", "Prenatal visit monitoring", "Child growth (height/weight) records", "Birth planning documentation"].map((item) => (
                     <li key={item}><CheckCircle size={13} />{item}</li>
                   ))}
                 </ul>
               </div>
             </div>
-            <div className="feature-card">
-              <div className="feature-card__img-wrap feature-card__img-wrap--blue">
+            <div className={styles['feature-card']}>
+              <div className={`${styles['feature-card__img-wrap']} ${styles['feature-card__img-wrap--blue']}`}>
                 <Pill size={44} color="white" />
-                <p className="feature-card__img-title">TB Treatment Compliance</p>
-                <p className="feature-card__img-sub">DOTS Monitoring Program</p>
+                <p className={styles['feature-card__img-title']}>TB Treatment Compliance</p>
+                <p className={styles['feature-card__img-sub']}>DOTS Monitoring Program</p>
               </div>
-              <div className="feature-card__body">
-                <div className="feature-card__meta">
-                  <div className="icon--blue"><Pill size={18} /></div>
-                  <span className="badge badge--blue">TB Monitoring</span>
+              <div className={styles['feature-card__body']}>
+                <div className={styles['feature-card__meta']}>
+                  <div className={styles['icon--blue']}><Pill size={18} /></div>
+                  <span className={`${styles['badge']} ${styles['badge--blue']}`}>TB Monitoring</span>
                 </div>
-                <h3 className="feature-card__title">TB Treatment Compliance Tracking</h3>
-                <p className="feature-card__desc">
+                <h3 className={styles['feature-card__title']}>TB Treatment Compliance Tracking</h3>
+                <p className={styles['feature-card__desc']}>
                   BHWs are responsible for monitoring tuberculosis patients undergoing DOTS. BantayKalusugan
                   provides digital tools for tracking medication compliance and follow-up schedules.
                 </p>
-                <ul className="check-list check-list--blue">
+                <ul className={`${styles['check-list']} ${styles['check-list--blue']}`}>
                   {["Daily medication intake logs", "DOTS compliance monitoring", "Treatment phase tracking", "Follow-up schedule alerts"].map((item) => (
                     <li key={item}><CheckCircle size={13} />{item}</li>
                   ))}
@@ -431,24 +432,24 @@ export default function LandingPage() {
       </section>
 
       {/* Section 7 – Services */}
-      <section id="services" className="section section--white">
-        <div className="container">
-          <div className="section-header">
-            <span className="badge badge--blue">Our Services</span>
-            <h2 className="section__title">
+      <section id="services" className={`${styles['section']} ${styles['section--white']}`}>
+        <div className={styles['container']}>
+          <div className={styles['section-header']}>
+            <span className={`${styles['badge']} ${styles['badge--blue']}`}>Our Services</span>
+            <h2 className={styles['section__title']}>
               Everything You Need for
-              <span className="text--blue"> Barangay Health</span>
+              <span className={styles['text--blue']}> Barangay Health</span>
             </h2>
-            <p className="section-header__sub">
+            <p className={styles['section-header__sub']}>
               Comprehensive tools for BHWs, administrators, and patients to manage community wellness effectively.
             </p>
           </div>
-          <div className="card-grid card-grid--3">
+          <div className={`${styles['card-grid']} ${styles['card-grid--3']}`}>
             {SERVICES.map((s) => (
-              <div key={s.title} className="card card--grey">
-                <div className={`card__icon icon--${s.color}`}>{s.icon}</div>
-                <h3 className="card__title">{s.title}</h3>
-                <p className="card__desc">{s.description}</p>
+              <div key={s.title} className={`${styles['card']} ${styles['card--grey']}`}>
+                <div className={`${styles.card__icon} ${styles[`icon--${s.color}`]}`}>{s.icon}</div>
+                <h3 className={styles['card__title']}>{s.title}</h3>
+                <p className={styles['card__desc']}>{s.description}</p>
               </div>
             ))}
           </div>
@@ -456,24 +457,24 @@ export default function LandingPage() {
       </section>
 
       {/* Section 8 – How It Works */}
-      <section className="section section--grey">
-        <div className="container">
-          <div className="section-header">
-            <span className="badge badge--red">How It Works</span>
-            <h2 className="section__title">
+      <section className={`${styles['section']} ${styles['section--grey']}`}>
+        <div className={styles['container']}>
+          <div className={styles['section-header']}>
+            <span className={`${styles['badge']} ${styles['badge--red']}`}>How It Works</span>
+            <h2 className={styles['section__title']}>
               Simple Process,
-              <span className="text--blue"> Powerful Results</span>
+              <span className={styles['text--blue']}> Powerful Results</span>
             </h2>
           </div>
-          <div className="card-grid card-grid--3">
+          <div className={`${styles['card-grid']} ${styles['card-grid--3']}`}>
             {STEPS.map((step, idx) => (
-              <div key={step.number} className="step-card">
-                <div className={`step-card__label bg--${step.color}`}>STEP {step.number}</div>
-                <div className={`step-card__circle bg--${step.color}`}>{step.icon}</div>
-                <h3 className="step-card__title">{step.title}</h3>
-                <p className="step-card__desc">{step.description}</p>
+              <div key={step.number} className={styles['step-card']}>
+                <div className={`${styles["step-card__label"]} ${styles[`bg--${step.color}`]}`}>STEP {step.number}</div>
+                <div className={`${styles["step-card__circle"]} ${styles[`bg--${step.color}`]}`}>{step.icon}</div>
+                <h3 className={styles['step-card__title']}>{step.title}</h3>
+                <p className={styles['step-card__desc']}>{step.description}</p>
                 {idx < STEPS.length - 1 && (
-                  <span className="step-card__arrow"><ArrowRight size={16} /></span>
+                  <span className={styles['step-card__arrow']}><ArrowRight size={16} /></span>
                 )}
               </div>
             ))}
@@ -482,40 +483,40 @@ export default function LandingPage() {
       </section>
 
         {/* Section 9 – User Roles */}
-        <section className="section section--white">
-            <div className="container">
-                <div className="section-header">
-                    <span className="badge badge--blue">Platform Roles</span>
-                    <h2 className="section__title">
+        <section className={`${styles['section']} ${styles['section--white']}`}>
+            <div className={styles['container']}>
+                <div className={styles['section-header']}>
+                    <span className={`${styles['badge']} ${styles['badge--blue']}`}>Platform Roles</span>
+                    <h2 className={styles['section__title']}>
                         Designed for Every
-                        <span className="text--blue"> Healthcare Role</span>
+                        <span className={styles['text--blue']}> Healthcare Role</span>
                     </h2>
-                    <p className="section-header__sub">
+                    <p className={styles['section-header__sub']}>
                         Two user types: Barangay staff manage the digital system, while patients access their personal health records.
                     </p>
                 </div>
 
-                <div className="card-grid card-grid--2" style={{ maxWidth: "860px", margin: "0 auto" }}>
+                <div className={`${styles['card-grid']} ${styles['card-grid--2']}`} style={{ maxWidth: "860px", margin: "0 auto" }}>
                     {ROLES.map((role) => (
                         <div
                                 key={role.role}
-                                className="card"
+                                className={styles['card']}
                                 style={{ backgroundColor: role.bg, border: `1px solid ${role.border}` }}
                             >
                             <div
-                                className="card__icon"
+                                className={styles['card__icon']}
                                 style={{ backgroundColor: `${role.color}20`, color: role.color }}
                             >
                                 {role.icon}
                             </div>
                             <span
-                                className="badge"
+                                className={styles['badge']}
                                 style={{ backgroundColor: `${role.color}20`, color: role.color }}
                             >
                                 {role.short}
                             </span>
-                            <h3 className="card__title" style={{ fontSize: "1rem" }}>{role.role}</h3>
-                            <ul className="check-list" style={{ marginTop: "8px" }}>
+                            <h3 className={styles['card__title']} style={{ fontSize: "1rem" }}>{role.role}</h3>
+                            <ul className={styles['check-list']} style={{ marginTop: "8px" }}>
                                 {role.features.map((f) => (
                                 <li key={f}>
                                     <CheckCircle size={13} style={{ color: role.color, marginTop: "2px", flexShrink: 0 }} />
@@ -530,31 +531,31 @@ export default function LandingPage() {
         </section>
 
       {/* Section 10 – Digital Records */}
-      <section className="section section--grey">
-        <div className="container">
-          <div className="two-col two-col--reversed">
-            <div className="two-col__media">
-              <div className="media-card">
-                <Img src={digitalHealthImage} alt="Digital health data management" className="media-card__img" />
+      <section className={`${styles['section']} ${styles['section--grey']}`}>
+        <div className={styles['container']}>
+          <div className={`${styles['two-col']} ${styles['two-col--reversed']}`}>
+            <div className={styles['two-col__media']}>
+              <div className={styles['media-card']}>
+                <Img src={digitalHealthImage} alt="Digital health data management" className={styles['media-card__img']} />
               </div>
             </div>
-            <div className="two-col__text">
-              <span className="badge badge--blue">Digital Records</span>
-              <h2 className="section__title">
+            <div className={styles['two-col__text']}>
+              <span className={`${styles['badge']} ${styles['badge--blue']}`}>Digital Records</span>
+              <h2 className={styles['section__title']}>
                 Say Goodbye to
-                <span className="text--red"> Paper-Based Chaos</span>
+                <span className={styles['text--red']}> Paper-Based Chaos</span>
               </h2>
-              <p className="body-text">
+              <p className={styles['body-text']}>
                 Replace error-prone manual logbooks with a centralized digital platform. All patient
                 vital signs, home visit records, and referral data are organized, searchable, and
                 accessible to authorized BHWs, administrators, and patients — reducing administrative
                 burden and improving community health outcomes.
               </p>
-              <div className="metric-grid">
+              <div className={styles['metric-grid']}>
                 {DIGITAL_METRICS.map((m) => (
-                  <div key={m.label} className="metric-item">
-                    <span className={`metric-item__value text--${m.color}`}>{m.value}</span>
-                    <span className="metric-item__label">{m.label}</span>
+                  <div key={m.label} className={styles['metric-item']}>
+                    <span className={`${styles["metric-item__value"]} ${styles[`text--${m.color}`]}`}>{m.value}</span>
+                    <span className={styles['metric-item__label']}>{m.label}</span>
                   </div>
                 ))}
               </div>
@@ -564,19 +565,19 @@ export default function LandingPage() {
       </section>
 
       {/* Section 11 – CTA */}
-      <section className="cta-section">
-        <div className="container cta-section__inner">
-          <h2 className="cta-section__title">
+      <section className={styles['cta-section']}>
+        <div className={`${styles['container']} ${styles['cta-section__inner']}`}>
+          <h2 className={styles['cta-section__title']}>
             Ready to Transform Your Barangay's
-            <span className="text--gold"> Health Management?</span>
+            <span className={styles['text--gold']}> Health Management?</span>
           </h2>
-          <p className="cta-section__desc">
+          <p className={styles['cta-section__desc']}>
             Empower your BHWs with digital tools. Improve community health outcomes. Join barangays
             already using BantayKalusugan to digitize their community health monitoring.
           </p>
-          <div className="cta-section__actions">
-            <button className="btn btn--gold" onClick={() => navigate("/login")}>Log In Now</button>
-            <button className="btn btn--outline-white" onClick={() => scrollTo("bhw")}>
+          <div className={styles['cta-section__actions']}>
+            <button className={`${styles['btn']} ${styles['btn--gold']}`} onClick={() => navigate("/login")}>Log In Now</button>
+            <button className={`${styles['btn']} ${styles['btn--outline-white']}`} onClick={() => scrollTo("bhw")}>
               Learn About BHWs
             </button>
           </div>
@@ -592,20 +593,20 @@ export default function LandingPage() {
 // ── Footer Component ─────────────────────────────────────────────────────────
 function Footer() {
   return (
-    <footer className="footer">
-      <div className="footer-container">
-        <div className="footer-grid">
+    <footer className={styles['footer']}>
+      <div className={styles['footer-container']}>
+        <div className={styles['footer-grid']}>
 
           {/* Brand Column */}
-          <div className="footer-brand">
-                <div className="footer-brand-logo">
+          <div className={styles['footer-brand']}>
+                <div className={styles['footer-brand-logo']}>
                         <img src={logo} alt="logo" style={{ width: "24px", height: "24px", objectFit: "contain" }} />
-                    <div className="footer-brand-name">
-                        <span className="brand-primary">Bantay</span>
-                        <span className="brand-accent">Kalusugan</span>
+                    <div className={styles['footer-brand-name']}>
+                        <span className={styles['brand-primary']}>Bantay</span>
+                        <span className={styles['brand-accent']}>Kalusugan</span>
                     </div>
                 </div>
-                <p className="footer-brand-desc">
+                <p className={styles['footer-brand-desc']}>
                     A web-based patient monitoring platform for barangay-level health
                     data management and community wellness tracking.
                 </p>
@@ -613,8 +614,8 @@ function Footer() {
 
           {/* Our Services Column */}
           <div>
-            <p className="footer-col-title">Our Services</p>
-            <ul className="footer-link-list">
+            <p className={styles['footer-col-title']}>Our Services</p>
+            <ul className={styles['footer-link-list']}>
               {["Blood Pressure Monitoring", "Health Record Management", "Health Trend Analysis"].map((l) => (
                 <li key={l}><a href="#">{l}</a></li>
               ))}
@@ -623,8 +624,8 @@ function Footer() {
 
           {/* Quick Links Column */}
           <div>
-            <p className="footer-col-title">Quick Links</p>
-            <ul className="footer-link-list">
+            <p className={styles['footer-col-title']}>Quick Links</p>
+            <ul className={styles['footer-link-list']}>
               {["Home", "Services", "About Us", "Contact"].map((l) => (
                 <li key={l}><a href="#">{l}</a></li>
               ))}
@@ -633,21 +634,21 @@ function Footer() {
 
           {/* Contact Column */}
           <div>
-            <p className="footer-col-title">Contact Us</p>
-            <ul className="footer-contact-list">
-              <li className="footer-contact-item">
-                <MapPin size={15} className="footer-contact-icon" />
-                <span className="footer-contact-text">
+            <p className={styles['footer-col-title']}>Contact Us</p>
+            <ul className={styles['footer-contact-list']}>
+              <li className={styles['footer-contact-item']}>
+                <MapPin size={15} className={styles['footer-contact-icon']} />
+                <span className={styles['footer-contact-text']}>
                   Barangay Health Center,<br />Sample Barangay, City, Philippines
                 </span>
               </li>
-              <li className="footer-contact-item">
-                <Phone size={15} className="footer-contact-icon" />
-                <span className="footer-contact-text">+63 912 345 6789</span>
+              <li className={styles['footer-contact-item']}>
+                <Phone size={15} className={styles['footer-contact-icon']} />
+                <span className={styles['footer-contact-text']}>+63 912 345 6789</span>
               </li>
-              <li className="footer-contact-item">
-                <Mail size={15} className="footer-contact-icon" />
-                <span className="footer-contact-text">info@bantaykalusugan.ph</span>
+              <li className={styles['footer-contact-item']}>
+                <Mail size={15} className={styles['footer-contact-icon']} />
+                <span className={styles['footer-contact-text']}>info@bantaykalusugan.ph</span>
               </li>
             </ul>
           </div>
@@ -655,11 +656,11 @@ function Footer() {
         </div>
 
         {/* Divider + Copyright */}
-        <div className="footer-divider">
-          <p className="footer-copyright">
+        <div className={styles['footer-divider']}>
+          <p className={styles['footer-copyright']}>
             © {new Date().getFullYear()} BantayKalusugan. All rights reserved.
           </p>
-          <div className="footer-bottom-links">
+          <div className={styles['footer-bottom-links']}>
             <a href="#">Privacy Policy</a>
             <a href="#">Terms of Service</a>
           </div>
