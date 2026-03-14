@@ -10,6 +10,9 @@ import AdminDashboard from './AdminDashboard.jsx'
 import AdminReports from './AdminReports.jsx'
 import AdminSettings from './AdminSettings.jsx'
 
+// Import the new component for testing backend connection
+import UserList from './components/UserList.jsx'
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
@@ -21,6 +24,8 @@ createRoot(document.getElementById('root')).render(
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/reports" element={<AdminReports />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
+        {/* Test Route for backend connection */}
+        <Route path="/users" element={<UserList />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>
