@@ -90,12 +90,26 @@ export default function Login() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const [loading, setLoading] = useState(false);
+
   const handleLogin = async () => {
+    // Clear previous errors
+    setError("");
+
+    // Client-side validation
     if (!email || !password) {
       setError("Please enter your email and password.");
       return;
     }
-    setError("");
+
+    // Validate email format before sending to backend
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const response = await fetch("http://localhost:8000/api/login/", {
@@ -104,20 +118,25 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         setError(data.detail || "Login failed. Please try again.");
+        setLoading(false);
         return;
       }
 
-      const data = await response.json();
-      // Store user info in localStorage so other pages can access it
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      // Redirect based on user role (for now, all go to dashboard)
-      navigate("/dashboard");
+      // Only navigate if we got a valid user back
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+        navigate("/dashboard");
+      } else {
+        setError("Login failed. Please try again.");
+        setLoading(false);
+      }
     } catch (err) {
       setError("Unable to connect to the server. Please try again later.");
+      setLoading(false);
     }
   };
 
@@ -179,8 +198,8 @@ export default function Login() {
 
             <a href="#" className={styles['forgot-password-link']}>Forgot password?</a>
 
-            <button className={styles['login-submit-btn']} onClick={handleLogin}>
-              Log In
+            <button className={styles['login-submit-btn']} onClick={handleLogin} disabled={loading}>
+              {loading ? "Logging in..." : "Log In"}
             </button>
           </div>
 
