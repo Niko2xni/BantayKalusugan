@@ -305,6 +305,122 @@
   font-weight: 600;
 }
 
+/* ══════════════════════════════════════════
+   NAVBAR
+══════════════════════════════════════════ */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  height: 64px;
+  background-color: var(--white);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  transition: box-shadow var(--transition);
+}
+
+.navbar--scrolled { box-shadow: 0 2px 16px rgba(0, 0, 0, 0.10); }
+
+.navbar__logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.navbar__logo-icon {
+  width: 30px;
+  height: 30px;
+  border: 2.5px solid var(--navy);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.navbar__logo-icon::before,
+.navbar__logo-icon::after {
+  content: '';
+  position: absolute;
+  background-color: var(--navy);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.navbar__logo-icon::before { width: 2px; height: 55%; }
+.navbar__logo-icon::after  { width: 55%; height: 2px; }
+
+.navbar__links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  list-style: none;
+}
+
+.navbar__links--desktop { display: flex; }
+
+.navbar__link {
+  font-size: 0.93rem;
+  font-weight: 400;
+  color: var(--text-dark);
+  transition: color var(--transition);
+}
+
+.navbar__link:hover { color: var(--navy); }
+
+.navbar__hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--navy);
+  padding: 4px;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-menu {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 150;
+  background-color: var(--white);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.mobile-menu__links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.mobile-menu__link {
+  display: block;
+  padding: 14px 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--grey-bg);
+  transition: color var(--transition);
+}
+
+.mobile-menu__link:hover { color: var(--navy); }
+
 .footer {
   background-color: #2e5895;
   color: #ffffff;
