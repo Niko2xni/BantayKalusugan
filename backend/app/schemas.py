@@ -1,19 +1,30 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import date, datetime
 
-# Base schema with common attributes
+# --- User Schemas ---
+
+# Base schema with fields shared across create and read
 class UserBase(BaseModel):
+    first_name: str
+    last_name: str
     email: EmailStr
-    full_name: Optional[str] = None
+    phone: str
+    date_of_birth: date
+    sex: str                          # "Male" or "Female"
+    address: str
+    barangay: str
 
-# Schema for creating a new user (requires a password)
+# Schema for creating a new user (frontend sends this on register)
 class UserCreate(UserBase):
-    password: str
+    password: str                     # Plain password (will be hashed before saving)
 
-# Schema for reading a user (excludes the password)
+# Schema for reading/returning a user (never includes the password)
 class User(UserBase):
     id: int
     is_active: bool
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
-        from_attributes = True  # Allows Pydantic to read data from SQLAlchemy ORM models
+        from_attributes = True        # Allows Pydantic to read data from SQLAlchemy ORM models
