@@ -1,5 +1,5 @@
 import styles from './AdminDashboard.module.css';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users,
@@ -37,42 +37,7 @@ import {
   Legend,
 } from "recharts";
 
-// Initial mock data
-const initialPatients = [
-  { id: "P-001", firstName: "Maria", lastName: "Santos", age: 58, gender: "Female", address: "Zone 1, Barangay San Roque", email: "maria.santos@email.com", dateRegistered: "2025-01-15" },
-  { id: "P-002", firstName: "Juan", lastName: "dela Cruz", age: 45, gender: "Male", address: "Zone 2, Barangay San Roque", email: "juan.delacruz@email.com", dateRegistered: "2025-02-20" },
-  { id: "P-003", firstName: "Rosario", lastName: "Reyes", age: 63, gender: "Female", address: "Zone 1, Barangay San Roque", email: "rosario.reyes@email.com", dateRegistered: "2025-03-10" },
-  { id: "P-004", firstName: "Eduardo", lastName: "Lim", age: 50, gender: "Male", address: "Zone 3, Barangay San Roque", email: "eduardo.lim@email.com", dateRegistered: "2025-04-05" },
-  { id: "P-005", firstName: "Lourdes", lastName: "Garcia", age: 70, gender: "Female", address: "Zone 2, Barangay San Roque", email: "lourdes.garcia@email.com", dateRegistered: "2025-05-12" },
-];
-
-const initialVitalSigns = [
-  { id: "V-001", patientId: "P-001", patientName: "Maria Santos", date: "2025-07-22", time: "09:30", systolic: 130, diastolic: 85, heartRate: 78, temperature: 36.6, spO2: 97, respiratoryRate: 18, weight: 65, height: 158, recordedBy: "Admin Staff" },
-  { id: "V-002", patientId: "P-002", patientName: "Juan dela Cruz", date: "2025-07-22", time: "10:15", systolic: 118, diastolic: 76, heartRate: 74, temperature: 36.4, spO2: 98, respiratoryRate: 16, weight: 72, height: 170, recordedBy: "Admin Staff" },
-  { id: "V-003", patientId: "P-003", patientName: "Rosario Reyes", date: "2025-07-21", time: "14:20", systolic: 145, diastolic: 92, heartRate: 88, temperature: 36.7, spO2: 95, respiratoryRate: 20, weight: 58, height: 155, recordedBy: "Admin Staff" },
-  { id: "V-004", patientId: "P-004", patientName: "Eduardo Lim", date: "2025-07-21", time: "11:00", systolic: 122, diastolic: 78, heartRate: 73, temperature: 36.5, spO2: 98, respiratoryRate: 17, weight: 78, height: 175, recordedBy: "Admin Staff" },
-  { id: "V-005", patientId: "P-005", patientName: "Lourdes Garcia", date: "2025-07-20", time: "15:45", systolic: 138, diastolic: 88, heartRate: 80, temperature: 36.6, spO2: 96, respiratoryRate: 19, weight: 60, height: 160, recordedBy: "Admin Staff" },
-];
-
-const bpTrendData = [
-  { month: "Jan", systolic: 125, diastolic: 82 },
-  { month: "Feb", systolic: 130, diastolic: 85 },
-  { month: "Mar", systolic: 128, diastolic: 83 },
-  { month: "Apr", systolic: 122, diastolic: 80 },
-  { month: "May", systolic: 135, diastolic: 88 },
-  { month: "Jun", systolic: 129, diastolic: 84 },
-  { month: "Jul", systolic: 124, diastolic: 81 },
-];
-
-const registrationsData = [
-  { month: "Jan", patients: 12 },
-  { month: "Feb", patients: 18 },
-  { month: "Mar", patients: 15 },
-  { month: "Apr", patients: 22 },
-  { month: "May", patients: 19 },
-  { month: "Jun", patients: 25 },
-  { month: "Jul", patients: 30 },
-];
+const API_BASE = "http://localhost:8000";
 
 const navItems = [
   { icon: <Home size={20} />, label: "Dashboard", id: "dashboard", path: "/admin" },
@@ -116,17 +81,77 @@ export default function AdminDashboard() {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Get admin name from localStorage
+  const adminData = JSON.parse(localStorage.getItem("user") || "{}");
+  const adminName = adminData.first_name
+    ? `${adminData.first_name} ${adminData.last_name}`
+    : "Admin";
+  const adminInitial = adminData.first_name ? adminData.first_name.charAt(0) : "A";
+
   // Patient state
-  const [patients, setPatients] = useState(initialPatients);
+  const [patients, setPatients] = useState([]);
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [showEditPatientModal, setShowEditPatientModal] = useState(false);
   const [editingPatient, setEditingPatient] = useState(null);
 
   // Vital signs state
-  const [vitalSigns, setVitalSigns] = useState(initialVitalSigns);
+  const [vitalSigns, setVitalSigns] = useState([]);
   const [showAddVitalModal, setShowAddVitalModal] = useState(false);
   const [showViewVitalModal, setShowViewVitalModal] = useState(false);
   const [selectedVital, setSelectedVital] = useState(null);
+
+  // Fetch patients and vital signs from backend
+  useEffect(() => {
+    fetch(`${API_BASE}/api/patients/`)
+      .then(res => res.json())
+      .then(data => {
+        // Map backend user data to the format the dashboard expects
+        const mapped = data.map(u => {
+          const dob = new Date(u.date_of_birth);
+          const age = new Date().getFullYear() - dob.getFullYear();
+          return {
+            id: u.id,
+            firstName: u.first_name,
+            lastName: u.last_name,
+            age,
+            gender: u.sex,
+            address: u.address,
+            email: u.email,
+            dateRegistered: u.created_at ? u.created_at.split("T")[0] : "N/A",
+          };
+        });
+        setPatients(mapped);
+      })
+      .catch(err => console.error("Failed to fetch patients:", err));
+
+    fetch(`${API_BASE}/api/vitals/`)
+      .then(res => res.json())
+      .then(data => {
+        const mapped = data.map(v => ({
+          id: v.id,
+          patientId: v.patient_id,
+          patientName: v.patient_name || "Unknown",
+          date: v.date,
+          time: v.time,
+          systolic: v.systolic,
+          diastolic: v.diastolic,
+          heartRate: v.heart_rate,
+          temperature: v.temperature,
+          spO2: v.spo2,
+          respiratoryRate: v.respiratory_rate,
+          weight: v.weight,
+          height: v.height,
+          recordedBy: v.recorded_by,
+        }));
+        setVitalSigns(mapped);
+      })
+      .catch(err => console.error("Failed to fetch vitals:", err));
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
 
   // Form states for adding patient
   const [newPatient, setNewPatient] = useState({
@@ -209,62 +234,126 @@ export default function AdminDashboard() {
     }
   };
 
-  // Add vital signs
-  const handleAddVital = () => {
+  // Add vital signs — POST to backend API
+  const handleAddVital = async () => {
     if (!newVital.patientId || !newVital.systolic || !newVital.diastolic || !newVital.heartRate || !newVital.temperature) {
       alert("Please fill in all required vital sign fields");
       return;
     }
 
-    const patient = patients.find(p => p.id === newVital.patientId);
-    if (!patient) return;
+    try {
+      const response = await fetch(`${API_BASE}/api/vitals/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient_id: parseInt(newVital.patientId),
+          date: newVital.date,
+          time: newVital.time,
+          systolic: parseInt(newVital.systolic),
+          diastolic: parseInt(newVital.diastolic),
+          heart_rate: parseInt(newVital.heartRate),
+          temperature: parseFloat(newVital.temperature),
+          spo2: parseInt(newVital.spO2) || 0,
+          respiratory_rate: parseInt(newVital.respiratoryRate) || 0,
+          weight: parseFloat(newVital.weight) || 0,
+          height: parseFloat(newVital.height) || 0,
+          recorded_by: adminName,
+        }),
+      });
 
-    const vitalId = `V-${String(vitalSigns.length + 1).padStart(3, '0')}`;
-    const vital = {
-      id: vitalId,
-      patientId: newVital.patientId,
-      patientName: `${patient.firstName} ${patient.lastName}`,
-      date: newVital.date,
-      time: newVital.time,
-      systolic: parseInt(newVital.systolic),
-      diastolic: parseInt(newVital.diastolic),
-      heartRate: parseInt(newVital.heartRate),
-      temperature: parseFloat(newVital.temperature),
-      spO2: parseInt(newVital.spO2) || 0,
-      respiratoryRate: parseInt(newVital.respiratoryRate) || 0,
-      weight: parseFloat(newVital.weight) || 0,
-      height: parseFloat(newVital.height) || 0,
-      recordedBy: "Admin Staff",
-    };
+      if (!response.ok) {
+        const data = await response.json();
+        alert(data.detail || "Failed to save vital signs");
+        return;
+      }
 
-    setVitalSigns([...vitalSigns, vital]);
-    setShowAddVitalModal(false);
-    setNewVital({
-      patientId: "",
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().slice(0, 5),
-      systolic: "",
-      diastolic: "",
-      heartRate: "",
-      temperature: "",
-      spO2: "",
-      respiratoryRate: "",
-      weight: "",
-      height: "",
-    });
-  };
+      const saved = await response.json();
+      // Add to local state
+      setVitalSigns([...vitalSigns, {
+        id: saved.id,
+        patientId: saved.patient_id,
+        patientName: saved.patient_name || "Unknown",
+        date: saved.date,
+        time: saved.time,
+        systolic: saved.systolic,
+        diastolic: saved.diastolic,
+        heartRate: saved.heart_rate,
+        temperature: saved.temperature,
+        spO2: saved.spo2,
+        respiratoryRate: saved.respiratory_rate,
+        weight: saved.weight,
+        height: saved.height,
+        recordedBy: saved.recorded_by,
+      }]);
 
-  // Delete vital sign
-  const handleDeleteVital = (vitalId) => {
-    if (confirm("Are you sure you want to delete this vital sign record?")) {
-      setVitalSigns(vitalSigns.filter(v => v.id !== vitalId));
+      setShowAddVitalModal(false);
+      setNewVital({
+        patientId: "",
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().slice(0, 5),
+        systolic: "",
+        diastolic: "",
+        heartRate: "",
+        temperature: "",
+        spO2: "",
+        respiratoryRate: "",
+        weight: "",
+        height: "",
+      });
+    } catch (err) {
+      alert("Failed to connect to the server.");
     }
   };
+
+  // Delete vital sign — DELETE from backend API
+  const handleDeleteVital = async (vitalId) => {
+    if (confirm("Are you sure you want to delete this vital sign record?")) {
+      try {
+        await fetch(`${API_BASE}/api/vitals/${vitalId}`, { method: "DELETE" });
+        setVitalSigns(vitalSigns.filter(v => v.id !== vitalId));
+      } catch (err) {
+        alert("Failed to delete vital sign record.");
+      }
+    }
+  };
+
+  // Compute BP trend data from actual vital signs
+  const bpTrendData = (() => {
+    const monthMap = {};
+    vitalSigns.forEach(v => {
+      const month = v.date ? v.date.substring(5, 7) : null;
+      if (!month) return;
+      const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      const label = monthNames[parseInt(month) - 1];
+      if (!monthMap[label]) monthMap[label] = { systolicSum: 0, diastolicSum: 0, count: 0 };
+      monthMap[label].systolicSum += v.systolic;
+      monthMap[label].diastolicSum += v.diastolic;
+      monthMap[label].count += 1;
+    });
+    return Object.entries(monthMap).map(([month, data]) => ({
+      month,
+      systolic: Math.round(data.systolicSum / data.count),
+      diastolic: Math.round(data.diastolicSum / data.count),
+    }));
+  })();
+
+  // Compute registrations data from actual patients
+  const registrationsData = (() => {
+    const monthMap = {};
+    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    patients.forEach(p => {
+      if (!p.dateRegistered || p.dateRegistered === "N/A") return;
+      const month = p.dateRegistered.substring(5, 7);
+      const label = monthNames[parseInt(month) - 1];
+      monthMap[label] = (monthMap[label] || 0) + 1;
+    });
+    return Object.entries(monthMap).map(([month, patients]) => ({ month, patients }));
+  })();
 
   const filteredPatients = patients.filter(
     (p) =>
       `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.id.toLowerCase().includes(searchQuery.toLowerCase())
+      String(p.id).includes(searchQuery)
   );
 
   // Calculate stats from real data
@@ -318,10 +407,7 @@ export default function AdminDashboard() {
 
         {/* Logout */}
         <button
-          onClick={() => {
-            // TODO: Implement logout functionality
-            alert("Logout functionality to be implemented");
-          }}
+          onClick={handleLogout}
           className={styles['sidebar-logout-btn']}
           title="Log Out"
         >
@@ -351,9 +437,9 @@ export default function AdminDashboard() {
               <span className={styles['bell-dot']} />
             </button>
             <div className={styles['topbar-avatar']}>
-              <div className={styles['topbar-avatar-circle']}>A</div>
+              <div className={styles['topbar-avatar-circle']}>{adminInitial}</div>
               <div className={`${styles['topbar-avatar-info']} ${styles['hidden']} ${styles['sm:flex']}`}>
-                <span className={styles['topbar-avatar-name']}>Admin</span>
+                <span className={styles['topbar-avatar-name']}>{adminName}</span>
               </div>
               <ChevronDown size={14} style={{ color: "#888" }} />
             </div>
@@ -482,7 +568,7 @@ export default function AdminDashboard() {
                                 </div>
                                 <div>
                                   <div className={styles['patient-name']}>{p.firstName} {p.lastName}</div>
-                                  <div className={styles['patient-id']}>{p.id}</div>
+                                  <div className={styles['patient-id']}>P-{String(p.id).padStart(3, '0')}</div>
                                 </div>
                               </div>
                             </td>
@@ -550,7 +636,7 @@ export default function AdminDashboard() {
 
                         return (
                           <tr key={p.id}>
-                            <td style={{ color: "#2E5895", fontWeight: 600 }}>{p.id}</td>
+                            <td style={{ color: "#2E5895", fontWeight: 600 }}>P-{String(p.id).padStart(3, '0')}</td>
                             <td>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 <div
@@ -919,7 +1005,7 @@ export default function AdminDashboard() {
                 >
                   <option value="">-- Select a patient --</option>
                   {patients.map(p => (
-                    <option key={p.id} value={p.id}>{p.id} - {p.firstName} {p.lastName}</option>
+                    <option key={p.id} value={p.id}>P-{String(p.id).padStart(3, '0')} - {p.firstName} {p.lastName}</option>
                   ))}
                 </select>
               </div>

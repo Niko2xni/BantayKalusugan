@@ -53,3 +53,45 @@ def authenticate_user(db: Session, email: str, password: str):
     if user.hashed_password != fake_hashed_password:
         return None
     return user
+
+# --- Patient queries ---
+
+# Get only patient-role users (for admin dashboard)
+def get_patients(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.User).filter(models.User.role == "patient").offset(skip).limit(limit).all()
+
+# --- VitalSign CRUD ---
+
+def create_vital_sign(db: Session, vital: schemas.VitalSignCreate):
+    db_vital = models.VitalSign(
+        patient_id=vital.patient_id,
+        date=vital.date,
+        time=vital.time,
+        systolic=vital.systolic,
+        diastolic=vital.diastolic,
+        heart_rate=vital.heart_rate,
+        temperature=vital.temperature,
+        spo2=vital.spo2,
+        respiratory_rate=vital.respiratory_rate,
+        weight=vital.weight,
+        height=vital.height,
+        recorded_by=vital.recorded_by,
+    )
+    db.add(db_vital)
+    db.commit()
+    db.refresh(db_vital)
+    return db_vital
+
+def get_vital_signs(db: Session, skip: int = 0, limit: int = 500):
+    return db.query(models.VitalSign).offset(skip).limit(limit).all()
+
+def get_vital_signs_by_patient(db: Session, patient_id: int):
+    return db.query(models.VitalSign).filter(models.VitalSign.patient_id == patient_id).all()
+
+def delete_vital_sign(db: Session, vital_id: int):
+    vital = db.query(models.VitalSign).filter(models.VitalSign.id == vital_id).first()
+    if vital:
+        db.delete(vital)
+        db.commit()
+    return vital
+

@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, Date, DateTime
+from sqlalchemy import Boolean, Column, Integer, String, Date, DateTime, Float, ForeignKey
 from sqlalchemy.sql import func
 from .database import Base
 
@@ -29,3 +29,31 @@ class User(Base):
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class VitalSign(Base):
+    __tablename__ = "vital_signs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # Date and time of recording
+    date = Column(String, nullable=False)           # "YYYY-MM-DD"
+    time = Column(String, nullable=False)           # "HH:MM"
+
+    # Vital sign measurements
+    systolic = Column(Integer, nullable=False)
+    diastolic = Column(Integer, nullable=False)
+    heart_rate = Column(Integer, nullable=False)
+    temperature = Column(Float, nullable=False)
+    spo2 = Column(Integer, default=0)
+    respiratory_rate = Column(Integer, default=0)
+    weight = Column(Float, default=0)
+    height = Column(Float, default=0)
+
+    # Who recorded the vital signs
+    recorded_by = Column(String, default="Admin Staff")
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+

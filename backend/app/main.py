@@ -66,3 +66,62 @@ def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     return schemas.LoginResponse(message="Login successful", user=user)
 
+
+# --- Patient Endpoints (for Admin Dashboard) ---
+
+@app.get("/api/patients/", response_model=List[schemas.User])
+def read_patients(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """Get only patient-role users (excludes admins)."""
+    return crud.get_patients(db, skip=skip, limit=limit)
+
+
+# --- Vital Signs Endpoints ---
+
+@app.post("/api/vitals/")
+def create_vital_sign(vital: schemas.VitalSignCreate, db: Session = Depends(get_db)):
+    # Verify patient exists
+    patient = crud.get_user(db, user_id=vital.patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    db_vital = crud.create_vital_sign(db=db, vital=vital)
+    # Return with patient name attached
+    return {
+        **{c.name: getattr(db_vital, c.name) for c in db_vital.__table__.columns},
+        "patient_name": f"{patient.first_name} {patient.last_name}",
+    }
+
+@app.get("/api/vitals/")
+def read_vital_signs(skip: int = 0, limit: int = 500, db: Session = Depends(get_db)):
+    """Get all vital sign records with patient names."""
+    vitals = crud.get_vital_signs(db, skip=skip, limit=limit)
+    results = []
+    for v in vitals:
+        patient = crud.get_user(db, user_id=v.patient_id)
+        patient_name = f"{patient.first_name} {patient.last_name}" if patient else "Unknown"
+        results.append({
+            **{c.name: getattr(v, c.name) for c in v.__table__.columns},
+            "patient_name": patient_name,
+        })
+    return results
+
+@app.get("/api/vitals/{patient_id}")
+def read_patient_vitals(patient_id: int, db: Session = Depends(get_db)):
+    """Get vital signs for a specific patient."""
+    patient = crud.get_user(db, user_id=patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    vitals = crud.get_vital_signs_by_patient(db, patient_id=patient_id)
+    results = []
+    for v in vitals:
+        results.append({
+            **{c.name: getattr(v, c.name) for c in v.__table__.columns},
+            "patient_name": f"{patient.first_name} {patient.last_name}",
+        })
+    return results
+
+@app.delete("/api/vitals/{vital_id}")
+def delete_vital_sign(vital_id: int, db: Session = Depends(get_db)):
+    vital = crud.delete_vital_sign(db, vital_id=vital_id)
+    if not vital:
+        raise HTTPException(status_code=404, detail="Vital sign record not found")
+    return {"message": "Vital sign record deleted"}

@@ -41,3 +41,31 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     message: str
     user: User
+
+# --- VitalSign Schemas ---
+
+class VitalSignBase(BaseModel):
+    patient_id: int
+    date: str
+    time: str
+    systolic: int
+    diastolic: int
+    heart_rate: int
+    temperature: float
+    spo2: Optional[int] = 0
+    respiratory_rate: Optional[int] = 0
+    weight: Optional[float] = 0
+    height: Optional[float] = 0
+    recorded_by: Optional[str] = "Admin Staff"
+
+class VitalSignCreate(VitalSignBase):
+    pass
+
+class VitalSign(VitalSignBase):
+    id: int
+    patient_name: Optional[str] = None   # We'll populate this from the patient's name
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+

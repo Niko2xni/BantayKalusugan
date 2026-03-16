@@ -9,6 +9,18 @@ import {
 
 const UserDashboard = () => {
   const navigate = useNavigate();
+
+  // Get logged-in user's name from localStorage
+  const userData = JSON.parse(localStorage.getItem("user") || "{}");
+  const userName = userData.first_name
+    ? `${userData.first_name} ${userData.last_name}`
+    : "User";
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
   const summaryData = [
     { title: "2 weeks", sub: "Before follow-up", date: "March 11, 2026", icon: <Calendar size={18}/>, color: "#eef2ff" },
     { title: "3", sub: "Vitals recorded", date: "This February", icon: <Activity size={18}/>, color: "#f0fdf4" },
@@ -30,7 +42,7 @@ const UserDashboard = () => {
             <li><a href="/#services" className={styles['navbar__link']}>Services</a></li>
             <li><a href="/#about" className={styles['navbar__link']}>About Us</a></li>
           </ul>
-          <button type="button" className={`${styles['btn']} ${styles['btn--outline-navy']} ${styles['btn--sm']}`} onClick={() => navigate('/login')}>Log Out</button>
+          <button type="button" className={`${styles['btn']} ${styles['btn--outline-navy']} ${styles['btn--sm']}`} onClick={handleLogout}>Log Out</button>
         </div>
       </nav>
 
