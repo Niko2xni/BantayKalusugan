@@ -70,8 +70,8 @@ const UserDashboard = () => {
       {/* HERO SECTION */}
       <section className={styles['hero']}>
         <div className={`${styles['hero__content']} ${styles['hero__content--visible']}`}>
-          <h2 className={styles['hero__title']}>Hello, <span className={styles['hero__title--gold']}>Full Name</span></h2>
-          <p className={styles['hero__desc']}>Lorem ipsum dolor sit amet</p>
+          <h2 className={styles['hero__title']}>Hello, <span className={styles['hero__title--gold']}>{userName}</span></h2>
+          <p className={styles['hero__desc']}>Welcome to your health dashboard</p>
         </div>
       </section>
 
