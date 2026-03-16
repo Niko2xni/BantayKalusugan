@@ -52,3 +52,11 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
+
+@app.post("/api/login/", response_model=schemas.LoginResponse)
+def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    user = crud.authenticate_user(db, email=login_data.email, password=login_data.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    return schemas.LoginResponse(message="Login successful", user=user)
+

@@ -90,19 +90,34 @@ export default function Login() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       setError("Please enter your email and password.");
       return;
     }
     setError("");
-    alert("login clicked");
-    // Simple mock authentication success
-    const domain = email.split("@")[1];
-    if (domain === "bantaykalusugan.com") {
-      navigate("/admin");
-    } else {
+
+    try {
+      const response = await fetch("http://localhost:8000/api/login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.detail || "Login failed. Please try again.");
+        return;
+      }
+
+      const data = await response.json();
+      // Store user info in localStorage so other pages can access it
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      // Redirect based on user role (for now, all go to dashboard)
       navigate("/dashboard");
+    } catch (err) {
+      setError("Unable to connect to the server. Please try again later.");
     }
   };
 

@@ -180,7 +180,7 @@ export default function Register() {
     setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -201,8 +201,34 @@ export default function Register() {
       return;
     }
 
-    setSuccess(true);
-    setTimeout(() => navigate("/login"), 2000);
+    try {
+      const response = await fetch("http://localhost:8000/api/users/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          date_of_birth: formData.dateOfBirth,
+          sex: formData.sex,
+          address: formData.address,
+          barangay: formData.barangay,
+          password: formData.password,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.detail || "Registration failed. Please try again.");
+        return;
+      }
+
+      setSuccess(true);
+      setTimeout(() => navigate("/login"), 2000);
+    } catch (err) {
+      setError("Unable to connect to the server. Please try again later.");
+    }
   };
 
   // ── Success screen ──
@@ -376,10 +402,6 @@ export default function Register() {
 
           <div className={styles['register-login-link']}>
             Already have an account? <Link to="/login">Log in here</Link>
-          </div>
-
-          <div className={styles['register-info-note']}>
-            <p><strong>Note:</strong> After registration, your account will be reviewed by barangay staff. You will be able to log in once approved.</p>
           </div>
         </div>
       </div>

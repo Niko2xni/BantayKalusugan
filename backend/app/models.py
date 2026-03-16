@@ -21,7 +21,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
 
     # Account Status
-    is_active = Column(Boolean, default=False)     # False by default — admin must approve
+    is_active = Column(Boolean, default=True)      # Users are active immediately upon registration
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

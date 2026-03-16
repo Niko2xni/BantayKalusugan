@@ -28,3 +28,15 @@ class User(UserBase):
 
     class Config:
         from_attributes = True        # Allows Pydantic to read data from SQLAlchemy ORM models
+
+# --- Login Schemas ---
+
+# Schema for login request (frontend sends this)
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+# Schema for login response (backend returns this)
+class LoginResponse(BaseModel):
+    message: str
+    user: User

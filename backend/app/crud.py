@@ -29,7 +29,7 @@ def create_user(db: Session, user: schemas.UserCreate):
         address=user.address,
         barangay=user.barangay,
         hashed_password=fake_hashed_password,
-        is_active=False,              # Account needs admin approval before activation
+        is_active=True,               # Account is active immediately
     )
 
     db.add(db_user)
@@ -37,3 +37,15 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.refresh(db_user)
 
     return db_user
+
+# Authenticate a user by email and password
+def authenticate_user(db: Session, email: str, password: str):
+    user = get_user_by_email(db, email)
+    if not user:
+        return None
+    # TODO: In production, use passlib to verify:
+    # e.g., if not pwd_context.verify(password, user.hashed_password): return None
+    fake_hashed_password = password + "_hashed"
+    if user.hashed_password != fake_hashed_password:
+        return None
+    return user
