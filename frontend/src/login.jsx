@@ -129,7 +129,13 @@ export default function Login() {
       // Only navigate if we got a valid user back
       if (data.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
-        navigate("/dashboard");
+
+        // Route based on user role from the database
+        if (data.user.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
+        }
       } else {
         setError("Login failed. Please try again.");
         setLoading(false);

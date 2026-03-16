@@ -20,6 +20,9 @@ class User(Base):
     # Authentication
     hashed_password = Column(String, nullable=False)
 
+    # Role-Based Access Control
+    role = Column(String, default="patient", nullable=False)  # "patient" or "admin"
+
     # Account Status
     is_active = Column(Boolean, default=True)      # Users are active immediately upon registration
     

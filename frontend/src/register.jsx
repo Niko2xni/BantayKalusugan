@@ -184,23 +184,72 @@ export default function Register() {
     e.preventDefault();
     setError("");
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      return;
+    // 1. Check that ALL fields are filled
+    const requiredFields = {
+      firstName: "First Name",
+      lastName: "Last Name",
+      email: "Email Address",
+      phone: "Phone Number",
+      dateOfBirth: "Date of Birth",
+      sex: "Sex",
+      address: "Address",
+      barangay: "Barangay",
+      password: "Password",
+      confirmPassword: "Confirm Password",
+    };
+
+    for (const [field, label] of Object.entries(requiredFields)) {
+      if (!formData[field] || formData[field].trim() === "") {
+        setError(`${label} is required.`);
+        return;
+      }
     }
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long");
+
+    // 2. Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Please enter a valid email address.");
       return;
     }
 
+    // 2b. Block admin domain from public registration
+    if (formData.email.toLowerCase().endsWith("@bantaykalusugan.com")) {
+      setError("This email domain is reserved for admin accounts. Please use a different email.");
+      return;
+    }
+
+    // 3. Validate phone number: must be exactly 11 digits and start with "09"
+    const phoneDigits = formData.phone.replace(/\s/g, ""); // remove any spaces
+    if (!/^\d{11}$/.test(phoneDigits)) {
+      setError("Phone number must be exactly 11 digits.");
+      return;
+    }
+    if (!phoneDigits.startsWith("09")) {
+      setError("Phone number must start with '09'.");
+      return;
+    }
+
+    // 4. Validate password length
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    // 5. Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    // 6. Validate date of birth
     const today = new Date();
     const birthDate = new Date(formData.dateOfBirth);
-    const age = today.getFullYear() - birthDate.getFullYear();
-    if (age < 1) {
-      setError("Invalid date of birth");
+    if (birthDate >= today) {
+      setError("Invalid date of birth.");
       return;
     }
 
+    // All client-side validation passed — send to backend
     try {
       const response = await fetch("http://localhost:8000/api/users/", {
         method: "POST",
@@ -209,7 +258,7 @@ export default function Register() {
           first_name: formData.firstName,
           last_name: formData.lastName,
           email: formData.email,
-          phone: formData.phone,
+          phone: phoneDigits,
           date_of_birth: formData.dateOfBirth,
           sex: formData.sex,
           address: formData.address,

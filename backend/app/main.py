@@ -36,9 +36,15 @@ def read_root():
 
 @app.post("/api/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # Block admin domain from public registration
+    if user.email.lower().endswith("@bantaykalusugan.com"):
+        raise HTTPException(status_code=400, detail="This email domain is reserved for admin accounts. Please use a different email.")
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+    db_phone = crud.get_user_by_phone(db, phone=user.phone)
+    if db_phone:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
     return crud.create_user(db=db, user=user)
 
 @app.get("/api/users/", response_model=List[schemas.User])

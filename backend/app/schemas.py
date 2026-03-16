@@ -22,6 +22,7 @@ class UserCreate(UserBase):
 # Schema for reading/returning a user (never includes the password)
 class User(UserBase):
     id: int
+    role: str
     is_active: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
