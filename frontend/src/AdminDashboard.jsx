@@ -1,6 +1,7 @@
-import styles from './AdminDashboard.module.css';
 import { useState, useEffect } from "react";
+import "./AdminDashboard.css";
 import { useNavigate } from "react-router-dom";
+import logo from "./assets/logo.png";
 import {
   Users,
   Activity,
@@ -23,6 +24,7 @@ import {
   Thermometer,
   Wind,
   Droplets,
+  FileCheck,
 } from "lucide-react";
 import {
   LineChart,
@@ -37,12 +39,48 @@ import {
   Legend,
 } from "recharts";
 
-const API_BASE = "http://localhost:8000";
+// Initial mock data
+const initialPatients = [
+  { id: "P-001", firstName: "Maria", lastName: "Santos", age: 58, gender: "Female", address: "Zone 1, Barangay San Roque", email: "maria.santos@email.com", dateRegistered: "2025-01-15" },
+  { id: "P-002", firstName: "Juan", lastName: "dela Cruz", age: 45, gender: "Male", address: "Zone 2, Barangay San Roque", email: "juan.delacruz@email.com", dateRegistered: "2025-02-20" },
+  { id: "P-003", firstName: "Rosario", lastName: "Reyes", age: 63, gender: "Female", address: "Zone 1, Barangay San Roque", email: "rosario.reyes@email.com", dateRegistered: "2025-03-10" },
+  { id: "P-004", firstName: "Eduardo", lastName: "Lim", age: 50, gender: "Male", address: "Zone 3, Barangay San Roque", email: "eduardo.lim@email.com", dateRegistered: "2025-04-05" },
+  { id: "P-005", firstName: "Lourdes", lastName: "Garcia", age: 70, gender: "Female", address: "Zone 2, Barangay San Roque", email: "lourdes.garcia@email.com", dateRegistered: "2025-05-12" },
+];
+
+const initialVitalSigns = [
+  { id: "V-001", patientId: "P-001", patientName: "Maria Santos", date: "2025-07-22", time: "09:30", systolic: 130, diastolic: 85, heartRate: 78, temperature: 36.6, spO2: 97, respiratoryRate: 18, weight: 65, height: 158, recordedBy: "Admin Staff" },
+  { id: "V-002", patientId: "P-002", patientName: "Juan dela Cruz", date: "2025-07-22", time: "10:15", systolic: 118, diastolic: 76, heartRate: 74, temperature: 36.4, spO2: 98, respiratoryRate: 16, weight: 72, height: 170, recordedBy: "Admin Staff" },
+  { id: "V-003", patientId: "P-003", patientName: "Rosario Reyes", date: "2025-07-21", time: "14:20", systolic: 145, diastolic: 92, heartRate: 88, temperature: 36.7, spO2: 95, respiratoryRate: 20, weight: 58, height: 155, recordedBy: "Admin Staff" },
+  { id: "V-004", patientId: "P-004", patientName: "Eduardo Lim", date: "2025-07-21", time: "11:00", systolic: 122, diastolic: 78, heartRate: 73, temperature: 36.5, spO2: 98, respiratoryRate: 17, weight: 78, height: 175, recordedBy: "Admin Staff" },
+  { id: "V-005", patientId: "P-005", patientName: "Lourdes Garcia", date: "2025-07-20", time: "15:45", systolic: 138, diastolic: 88, heartRate: 80, temperature: 36.6, spO2: 96, respiratoryRate: 19, weight: 60, height: 160, recordedBy: "Admin Staff" },
+];
+
+const bpTrendData = [
+  { month: "Jan", systolic: 125, diastolic: 82 },
+  { month: "Feb", systolic: 130, diastolic: 85 },
+  { month: "Mar", systolic: 128, diastolic: 83 },
+  { month: "Apr", systolic: 122, diastolic: 80 },
+  { month: "May", systolic: 135, diastolic: 88 },
+  { month: "Jun", systolic: 129, diastolic: 84 },
+  { month: "Jul", systolic: 124, diastolic: 81 },
+];
+
+const registrationsData = [
+  { month: "Jan", patients: 12 },
+  { month: "Feb", patients: 18 },
+  { month: "Mar", patients: 15 },
+  { month: "Apr", patients: 22 },
+  { month: "May", patients: 19 },
+  { month: "Jun", patients: 25 },
+  { month: "Jul", patients: 30 },
+];
 
 const navItems = [
   { icon: <Home size={20} />, label: "Dashboard", id: "dashboard", path: "/admin" },
   { icon: <Users size={20} />, label: "Patients", id: "patients", path: "/admin" },
   { icon: <Activity size={20} />, label: "Vital Records", id: "records", path: "/admin" },
+  { icon: <FileCheck size={20} />, label: "Audit Logs", id: "audit", path: "/admin/audit-logs" },
   { icon: <FileText size={20} />, label: "Reports", id: "reports", path: "/admin/reports" },
   { icon: <Settings size={20} />, label: "Settings", id: "settings", path: "/admin/settings" },
 ];
@@ -56,7 +94,7 @@ function StatusBadge({ status }) {
   const style = styles[status] || styles.Normal;
   return (
     <span
-      className={`${styles['px-2']} ${styles['py-0.5']} ${styles['rounded-full']} ${styles['text-xs']}`}
+      className="px-2 py-0.5 rounded-full text-xs"
       style={{ backgroundColor: style.bg, color: style.text, fontWeight: 600 }}
     >
       {status}
@@ -76,17 +114,12 @@ function getStatus(systolic, diastolic) {
   return "Normal";
 }
 
+const API_BASE = "http://localhost:8000";
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Get admin name from localStorage
-  const adminData = JSON.parse(localStorage.getItem("user") || "{}");
-  const adminName = adminData.first_name
-    ? `${adminData.first_name} ${adminData.last_name}`
-    : "Admin";
-  const adminInitial = adminData.first_name ? adminData.first_name.charAt(0) : "A";
 
   // Patient state
   const [patients, setPatients] = useState([]);
@@ -100,26 +133,22 @@ export default function AdminDashboard() {
   const [showViewVitalModal, setShowViewVitalModal] = useState(false);
   const [selectedVital, setSelectedVital] = useState(null);
 
-  // Fetch patients and vital signs from backend
+  // Fetch from backend
   useEffect(() => {
     fetch(`${API_BASE}/api/patients/`)
       .then(res => res.json())
       .then(data => {
-        // Map backend user data to the format the dashboard expects
-        const mapped = data.map(u => {
-          const dob = new Date(u.date_of_birth);
-          const age = new Date().getFullYear() - dob.getFullYear();
-          return {
-            id: u.id,
-            firstName: u.first_name,
-            lastName: u.last_name,
-            age,
-            gender: u.sex,
-            address: u.address,
-            email: u.email,
-            dateRegistered: u.created_at ? u.created_at.split("T")[0] : "N/A",
-          };
-        });
+        const mapped = data.map(p => ({
+          id: `P-${String(p.id).padStart(3, '0')}`,
+          dbId: p.id,
+          firstName: p.first_name,
+          lastName: p.last_name,
+          age: p.age,
+          gender: p.gender,
+          address: p.address,
+          email: p.email,
+          dateRegistered: new Date(p.created_at).toISOString().split('T')[0],
+        }));
         setPatients(mapped);
       })
       .catch(err => console.error("Failed to fetch patients:", err));
@@ -128,11 +157,12 @@ export default function AdminDashboard() {
       .then(res => res.json())
       .then(data => {
         const mapped = data.map(v => ({
-          id: v.id,
-          patientId: v.patient_id,
+          id: `V-${String(v.id).padStart(3, '0')}`,
+          dbId: v.id,
+          patientId: `P-${String(v.patient_id).padStart(3, '0')}`,
           patientName: v.patient_name || "Unknown",
-          date: v.date,
-          time: v.time,
+          date: new Date(v.created_at).toISOString().split('T')[0],
+          time: new Date(v.created_at).toTimeString().slice(0, 5),
           systolic: v.systolic,
           diastolic: v.diastolic,
           heartRate: v.heart_rate,
@@ -141,17 +171,23 @@ export default function AdminDashboard() {
           respiratoryRate: v.respiratory_rate,
           weight: v.weight,
           height: v.height,
-          recordedBy: v.recorded_by,
+          recordedBy: "Admin",
         }));
         setVitalSigns(mapped);
       })
       .catch(err => console.error("Failed to fetch vitals:", err));
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
+  // Update vital signs names when patients load
+  useEffect(() => {
+    if (patients.length > 0 && vitalSigns.length > 0 && vitalSigns.some(v => v.patientName === "Unknown")) {
+      setVitalSigns(prev => prev.map(v => {
+        if (v.patientName !== "Unknown") return v;
+        const p = patients.find(pat => pat.id === v.patientId);
+        return p ? { ...v, patientName: `${p.firstName} ${p.lastName}` } : v;
+      }));
+    }
+  }, [patients, vitalSigns]);
 
   // Form states for adding patient
   const [newPatient, setNewPatient] = useState({
@@ -234,21 +270,22 @@ export default function AdminDashboard() {
     }
   };
 
-  // Add vital signs — POST to backend API
+  // Add vital signs
   const handleAddVital = async () => {
     if (!newVital.patientId || !newVital.systolic || !newVital.diastolic || !newVital.heartRate || !newVital.temperature) {
       alert("Please fill in all required vital sign fields");
       return;
     }
 
+    const patient = patients.find(p => p.id === newVital.patientId);
+    if (!patient) return;
+
     try {
       const response = await fetch(`${API_BASE}/api/vitals/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          patient_id: parseInt(newVital.patientId),
-          date: newVital.date,
-          time: newVital.time,
+          patient_id: patient.dbId,
           systolic: parseInt(newVital.systolic),
           diastolic: parseInt(newVital.diastolic),
           heart_rate: parseInt(newVital.heartRate),
@@ -257,103 +294,77 @@ export default function AdminDashboard() {
           respiratory_rate: parseInt(newVital.respiratoryRate) || 0,
           weight: parseFloat(newVital.weight) || 0,
           height: parseFloat(newVital.height) || 0,
-          recorded_by: adminName,
         }),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        alert(data.detail || "Failed to save vital signs");
-        return;
+      if (response.ok) {
+        const v = await response.json();
+        const vital = {
+          id: `V-${String(v.id).padStart(3, '0')}`,
+          dbId: v.id,
+          patientId: newVital.patientId,
+          patientName: `${patient.firstName} ${patient.lastName}`,
+          date: new Date(v.created_at).toISOString().split('T')[0],
+          time: new Date(v.created_at).toTimeString().slice(0, 5),
+          systolic: v.systolic,
+          diastolic: v.diastolic,
+          heartRate: v.heart_rate,
+          temperature: v.temperature,
+          spO2: v.spo2,
+          respiratoryRate: v.respiratory_rate,
+          weight: v.weight,
+          height: v.height,
+          recordedBy: "Admin Staff",
+        };
+        setVitalSigns([...vitalSigns, vital]);
+        setShowAddVitalModal(false);
+        setNewVital({
+          patientId: "",
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toTimeString().slice(0, 5),
+          systolic: "",
+          diastolic: "",
+          heartRate: "",
+          temperature: "",
+          spO2: "",
+          respiratoryRate: "",
+          weight: "",
+          height: "",
+        });
+      } else {
+        alert("Failed to save vital sign to database.");
       }
-
-      const saved = await response.json();
-      // Add to local state
-      setVitalSigns([...vitalSigns, {
-        id: saved.id,
-        patientId: saved.patient_id,
-        patientName: saved.patient_name || "Unknown",
-        date: saved.date,
-        time: saved.time,
-        systolic: saved.systolic,
-        diastolic: saved.diastolic,
-        heartRate: saved.heart_rate,
-        temperature: saved.temperature,
-        spO2: saved.spo2,
-        respiratoryRate: saved.respiratory_rate,
-        weight: saved.weight,
-        height: saved.height,
-        recordedBy: saved.recorded_by,
-      }]);
-
-      setShowAddVitalModal(false);
-      setNewVital({
-        patientId: "",
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toTimeString().slice(0, 5),
-        systolic: "",
-        diastolic: "",
-        heartRate: "",
-        temperature: "",
-        spO2: "",
-        respiratoryRate: "",
-        weight: "",
-        height: "",
-      });
     } catch (err) {
-      alert("Failed to connect to the server.");
+      console.error(err);
+      alert("Error connecting to server.");
     }
   };
 
-  // Delete vital sign — DELETE from backend API
+  // Delete vital sign
   const handleDeleteVital = async (vitalId) => {
     if (confirm("Are you sure you want to delete this vital sign record?")) {
-      try {
-        await fetch(`${API_BASE}/api/vitals/${vitalId}`, { method: "DELETE" });
-        setVitalSigns(vitalSigns.filter(v => v.id !== vitalId));
-      } catch (err) {
-        alert("Failed to delete vital sign record.");
+      const v = vitalSigns.find(vital => vital.id === vitalId);
+      if (v && v.dbId) {
+        try {
+          const res = await fetch(`${API_BASE}/api/vitals/${v.dbId}`, { method: "DELETE" });
+          if (res.ok) {
+            setVitalSigns(vitalSigns.filter(vital => vital.id !== vitalId));
+          } else {
+            alert("Failed to delete record.");
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      } else {
+        setVitalSigns(vitalSigns.filter(vital => vital.id !== vitalId));
       }
     }
   };
-
-  // Compute BP trend data from actual vital signs
-  const bpTrendData = (() => {
-    const monthMap = {};
-    vitalSigns.forEach(v => {
-      const month = v.date ? v.date.substring(5, 7) : null;
-      if (!month) return;
-      const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-      const label = monthNames[parseInt(month) - 1];
-      if (!monthMap[label]) monthMap[label] = { systolicSum: 0, diastolicSum: 0, count: 0 };
-      monthMap[label].systolicSum += v.systolic;
-      monthMap[label].diastolicSum += v.diastolic;
-      monthMap[label].count += 1;
-    });
-    return Object.entries(monthMap).map(([month, data]) => ({
-      month,
-      systolic: Math.round(data.systolicSum / data.count),
-      diastolic: Math.round(data.diastolicSum / data.count),
-    }));
-  })();
-
-  // Compute registrations data from actual patients
-  const registrationsData = (() => {
-    const monthMap = {};
-    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    patients.forEach(p => {
-      if (!p.dateRegistered || p.dateRegistered === "N/A") return;
-      const month = p.dateRegistered.substring(5, 7);
-      const label = monthNames[parseInt(month) - 1];
-      monthMap[label] = (monthMap[label] || 0) + 1;
-    });
-    return Object.entries(monthMap).map(([month, patients]) => ({ month, patients }));
-  })();
 
   const filteredPatients = patients.filter(
     (p) =>
       `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      String(p.id).includes(searchQuery)
+      p.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Calculate stats from real data
@@ -377,16 +388,16 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className={styles['admin-layout']}>
+    <div className="admin-layout">
       {/* Yellow Icon Sidebar */}
-      <aside className={styles['admin-sidebar']}>
+      <aside className="admin-sidebar">
         {/* Logo */}
-        <div className={styles['sidebar-logo-wrap']}>
-          {/* Empty logo as requested */}
+        <div className="sidebar-logo-wrap">
+          <img src={logo} alt="BantayKalusugan Logo" />
         </div>
 
         {/* Nav Icons */}
-        <nav className={styles['sidebar-nav']}>
+        <nav className="sidebar-nav">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -397,18 +408,21 @@ export default function AdminDashboard() {
                   setActiveNav(item.id);
                 }
               }}
-              className={`${styles["sidebar-nav-btn"]} ${activeNav === item.id ? styles.active : ""}`}
+              className={`sidebar-nav-btn ${activeNav === item.id ? "active" : ""}`}
             >
               {item.icon}
-              <span className={styles['nav-tooltip']}>{item.label}</span>
+              <span className="nav-tooltip">{item.label}</span>
             </button>
           ))}
         </nav>
 
         {/* Logout */}
         <button
-          onClick={handleLogout}
-          className={styles['sidebar-logout-btn']}
+          onClick={() => {
+            // TODO: Implement logout functionality
+            alert("Logout functionality to be implemented");
+          }}
+          className="sidebar-logout-btn"
           title="Log Out"
         >
           <LogOut size={20} />
@@ -416,30 +430,30 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Content */}
-      <div className={styles['admin-main']}>
+      <div className="admin-main">
         {/* Top Bar */}
-        <header className={styles['admin-topbar']}>
-          <div className={styles['topbar-left']}>
-            <h1 className={styles['topbar-title']}>
+        <header className="admin-topbar">
+          <div className="topbar-left">
+            <h1 className="topbar-title">
               {activeNav === "dashboard" && "Admin Dashboard"}
               {activeNav === "patients" && "Patient Management"}
               {activeNav === "records" && "Vital Records"}
               {activeNav === "reports" && "Reports"}
               {activeNav === "settings" && "Settings"}
             </h1>
-            <p className={styles['topbar-subtitle']}>
+            <p className="topbar-subtitle">
               {new Date().toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </p>
           </div>
-          <div className={styles['topbar-right']}>
-            <button className={styles['topbar-bell-btn']}>
+          <div className="topbar-right">
+            <button className="topbar-bell-btn">
               <Bell size={18} />
-              <span className={styles['bell-dot']} />
+              <span className="bell-dot" />
             </button>
-            <div className={styles['topbar-avatar']}>
-              <div className={styles['topbar-avatar-circle']}>{adminInitial}</div>
-              <div className={`${styles['topbar-avatar-info']} ${styles['hidden']} ${styles['sm:flex']}`}>
-                <span className={styles['topbar-avatar-name']}>{adminName}</span>
+            <div className="topbar-avatar">
+              <div className="topbar-avatar-circle">A</div>
+              <div className="topbar-avatar-info hidden sm:flex">
+                <span className="topbar-avatar-name">Admin</span>
               </div>
               <ChevronDown size={14} style={{ color: "#888" }} />
             </div>
@@ -447,39 +461,39 @@ export default function AdminDashboard() {
         </header>
 
         {/* Page Content */}
-        <main className={styles['admin-body']}>
+        <main className="admin-body">
           {/* Dashboard View */}
           {activeNav === "dashboard" && (
             <div>
               {/* Stats */}
-              <div className={styles['stat-cards-row']}>
+              <div className="stat-cards-row">
                 {stats.map((stat) => (
-                  <div key={stat.label} className={styles['stat-card']}>
+                  <div key={stat.label} className="stat-card">
                     <div
-                      className={styles['stat-card-icon']}
+                      className="stat-card-icon"
                       style={{ backgroundColor: `${stat.color}15`, color: stat.color }}
                     >
                       {stat.icon}
                     </div>
-                    <div className={styles['stat-card-body']}>
-                      <div className={styles['stat-card-value']} style={{ color: stat.color }}>
+                    <div className="stat-card-body">
+                      <div className="stat-card-value" style={{ color: stat.color }}>
                         {stat.value}
                       </div>
-                      <div className={styles['stat-card-label']}>{stat.label}</div>
-                      <div className={styles['stat-card-change']}>{stat.change}</div>
+                      <div className="stat-card-label">{stat.label}</div>
+                      <div className="stat-card-change">{stat.change}</div>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Charts Row */}
-              <div className={styles['charts-row']}>
+              <div className="charts-row">
                 {/* BP Trend Chart */}
-                <div className={styles['chart-card']}>
-                  <div className={styles['chart-card-header']}>
+                <div className="chart-card">
+                  <div className="chart-card-header">
                     <div>
-                      <h3 className={styles['chart-card-title']}>Average BP Trends</h3>
-                      <p className={styles['chart-card-subtitle']}>Community-wide blood pressure averages</p>
+                      <h3 className="chart-card-title">Average BP Trends</h3>
+                      <p className="chart-card-subtitle">Community-wide blood pressure averages</p>
                     </div>
                   </div>
                   <ResponsiveContainer width="100%" height={240}>
@@ -512,11 +526,11 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Registrations Chart */}
-                <div className={styles['chart-card']}>
-                  <div className={styles['chart-card-header']}>
+                <div className="chart-card">
+                  <div className="chart-card-header">
                     <div>
-                      <h3 className={styles['chart-card-title']}>Patient Registrations</h3>
-                      <p className={styles['chart-card-subtitle']}>Monthly new patient registrations</p>
+                      <h3 className="chart-card-title">Patient Registrations</h3>
+                      <p className="chart-card-subtitle">Monthly new patient registrations</p>
                     </div>
                   </div>
                   <ResponsiveContainer width="100%" height={240}>
@@ -534,15 +548,15 @@ export default function AdminDashboard() {
               </div>
 
               {/* Recent Patients Table */}
-              <div className={styles['table-card']} style={{ marginTop: "1.5rem" }}>
-                <div className={styles['table-card-header']}>
-                  <h3 className={styles['table-card-title']}>Recent Patients</h3>
-                  <button onClick={() => setActiveNav("patients")} className={`${styles['table-action-btn']} ${styles['secondary']}`}>
+              <div className="table-card" style={{ marginTop: "1.5rem" }}>
+                <div className="table-card-header">
+                  <h3 className="table-card-title">Recent Patients</h3>
+                  <button onClick={() => setActiveNav("patients")} className="table-action-btn secondary">
                     View All
                   </button>
                 </div>
-                <div className={styles['table-wrapper']}>
-                  <table className={styles['data-table']}>
+                <div className="table-wrapper">
+                  <table className="data-table">
                     <thead>
                       <tr>
                         <th>Patient</th>
@@ -561,14 +575,14 @@ export default function AdminDashboard() {
                             <td>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 <div
-                                  className={styles['topbar-avatar-circle']}
+                                  className="topbar-avatar-circle"
                                   style={{ width: "28px", height: "28px", fontSize: "0.6rem" }}
                                 >
                                   {p.firstName.charAt(0)}
                                 </div>
                                 <div>
-                                  <div className={styles['patient-name']}>{p.firstName} {p.lastName}</div>
-                                  <div className={styles['patient-id']}>P-{String(p.id).padStart(3, '0')}</div>
+                                  <div className="patient-name">{p.firstName} {p.lastName}</div>
+                                  <div className="patient-id">{p.id}</div>
                                 </div>
                               </div>
                             </td>
@@ -592,8 +606,8 @@ export default function AdminDashboard() {
           {activeNav === "patients" && (
             <div>
               {/* Filter Bar */}
-              <div className={styles['filter-bar']}>
-                <div className={styles['filter-search']}>
+              <div className="filter-bar">
+                <div className="filter-search">
                   <Search size={16} color="#888" />
                   <input
                     type="text"
@@ -603,13 +617,13 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div style={{ display: "flex", gap: "0.75rem", marginLeft: "auto" }}>
-                  <button className={`${styles['table-action-btn']} ${styles['secondary']}`}>
+                  <button className="table-action-btn secondary">
                     <Filter size={14} />
                     Filter
                   </button>
                   <button
                     onClick={() => setShowAddPatientModal(true)}
-                    className={styles['table-action-btn']}
+                    className="table-action-btn"
                   >
                     <Plus size={14} />
                     Add Patient
@@ -618,9 +632,9 @@ export default function AdminDashboard() {
               </div>
 
               {/* Table */}
-              <div className={styles['table-card']} style={{ marginTop: "1.5rem" }}>
-                <div className={styles['table-wrapper']}>
-                  <table className={styles['data-table']}>
+              <div className="table-card" style={{ marginTop: "1.5rem" }}>
+                <div className="table-wrapper">
+                  <table className="data-table">
                     <thead>
                       <tr>
                         {["Patient ID", "Name", "Age", "Gender", "Last BP", "Status", "Date", "Actions"].map((h) => (
@@ -636,16 +650,16 @@ export default function AdminDashboard() {
 
                         return (
                           <tr key={p.id}>
-                            <td style={{ color: "#2E5895", fontWeight: 600 }}>P-{String(p.id).padStart(3, '0')}</td>
+                            <td style={{ color: "#2E5895", fontWeight: 600 }}>{p.id}</td>
                             <td>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                 <div
-                                  className={styles['topbar-avatar-circle']}
+                                  className="topbar-avatar-circle"
                                   style={{ width: "28px", height: "28px", fontSize: "0.6rem" }}
                                 >
                                   {p.firstName.charAt(0)}
                                 </div>
-                                <span className={styles['patient-name']}>{p.firstName} {p.lastName}</span>
+                                <span className="patient-name">{p.firstName} {p.lastName}</span>
                               </div>
                             </td>
                             <td>{p.age}</td>
@@ -654,9 +668,9 @@ export default function AdminDashboard() {
                             <td>
                               <StatusBadge status={status} />
                             </td>
-                            <td className={styles['patient-id']}>{p.dateRegistered}</td>
+                            <td className="patient-id">{p.dateRegistered}</td>
                             <td>
-                              <div className={styles['row-actions']}>
+                              <div className="row-actions">
                                 <button
                                   onClick={() => {
                                     const patientVitals = vitalSigns.filter(v => v.patientId === p.id);
@@ -667,7 +681,7 @@ export default function AdminDashboard() {
                                       alert("No vital signs recorded for this patient yet.");
                                     }
                                   }}
-                                  className={`${styles['icon-btn']} ${styles['view']}`}
+                                  className="icon-btn view"
                                   title="View vitals"
                                 >
                                   <Eye size={14} />
@@ -677,14 +691,14 @@ export default function AdminDashboard() {
                                     setEditingPatient(p);
                                     setShowEditPatientModal(true);
                                   }}
-                                  className={styles['icon-btn']}
+                                  className="icon-btn"
                                   title="Edit patient"
                                 >
                                   <Edit2 size={14} />
                                 </button>
                                 <button
                                   onClick={() => handleDeletePatient(p.id)}
-                                  className={`${styles['icon-btn']} ${styles['danger']}`}
+                                  className="icon-btn danger"
                                   title="Delete patient"
                                 >
                                   <Trash2 size={14} />
@@ -709,18 +723,18 @@ export default function AdminDashboard() {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
                 <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#333" }}>Vital Sign Records</h2>
-                <button onClick={() => setShowAddVitalModal(true)} className={styles['table-action-btn']}>
+                <button onClick={() => setShowAddVitalModal(true)} className="table-action-btn">
                   <Plus size={14} />
                   Add Vital Signs
                 </button>
               </div>
 
               {/* Chart */}
-              <div className={styles['chart-card']} style={{ marginBottom: "1.5rem" }}>
-                <div className={styles['chart-card-header']}>
+              <div className="chart-card" style={{ marginBottom: "1.5rem" }}>
+                <div className="chart-card-header">
                   <div>
-                    <h3 className={styles['chart-card-title']}>Community BP Trend</h3>
-                    <p className={styles['chart-card-subtitle']}>Average blood pressure readings across all patients (2025)</p>
+                    <h3 className="chart-card-title">Community BP Trend</h3>
+                    <p className="chart-card-subtitle">Average blood pressure readings across all patients (2025)</p>
                   </div>
                 </div>
                 <ResponsiveContainer width="100%" height={250}>
@@ -737,9 +751,9 @@ export default function AdminDashboard() {
               </div>
 
               {/* Records Table */}
-              <div className={styles['table-card']}>
-                <div className={styles['table-wrapper']}>
-                  <table className={styles['data-table']}>
+              <div className="table-card">
+                <div className="table-wrapper">
+                  <table className="data-table">
                     <thead>
                       <tr>
                         {["Date", "Time", "Patient", "BP", "HR", "Temp", "SpO₂", "Status", "Actions"].map((h) => (
@@ -755,8 +769,8 @@ export default function AdminDashboard() {
                           return (
                             <tr key={v.id}>
                               <td>{v.date}</td>
-                              <td className={styles['patient-id']}>{v.time}</td>
-                              <td className={styles['patient-name']}>{v.patientName}</td>
+                              <td className="patient-id">{v.time}</td>
+                              <td className="patient-name">{v.patientName}</td>
                               <td style={{ color: "#C23B21", fontWeight: 600 }}>
                                 {v.systolic}/{v.diastolic}
                               </td>
@@ -767,20 +781,20 @@ export default function AdminDashboard() {
                                 <StatusBadge status={status} />
                               </td>
                               <td>
-                                <div className={styles['row-actions']}>
+                                <div className="row-actions">
                                   <button
                                     onClick={() => {
                                       setSelectedVital(v);
                                       setShowViewVitalModal(true);
                                     }}
-                                    className={`${styles['icon-btn']} ${styles['view']}`}
+                                    className="icon-btn view"
                                     title="View details"
                                   >
                                     <Eye size={14} />
                                   </button>
                                   <button
                                     onClick={() => handleDeleteVital(v.id)}
-                                    className={`${styles['icon-btn']} ${styles['danger']}`}
+                                    className="icon-btn danger"
                                     title="Delete record"
                                   >
                                     <Trash2 size={14} />
@@ -799,14 +813,14 @@ export default function AdminDashboard() {
 
           {/* Reports/Settings Placeholder */}
           {(activeNav === "reports" || activeNav === "settings") && (
-            <div className={styles['empty-state']} style={{ backgroundColor: "#fff", borderRadius: "1rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-              <div className={styles['empty-state-icon']}>
+            <div className="empty-state" style={{ backgroundColor: "#fff", borderRadius: "1rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div className="empty-state-icon">
                 {activeNav === "reports" ? <FileText size={28} /> : <Settings size={28} />}
               </div>
-              <h3 className={styles['empty-state-title']}>
+              <h3 className="empty-state-title">
                 {activeNav === "reports" ? "Reports" : "Settings"}
               </h3>
-              <p className={styles['empty-state-sub']}>
+              <p className="empty-state-sub">
                 This section is under development. Check back soon.
               </p>
             </div>
@@ -816,84 +830,84 @@ export default function AdminDashboard() {
 
       {/* Add Patient Modal */}
       {showAddPatientModal && (
-        <div className={styles['modal-overlay']}>
-          <div className={styles['modal-box']}>
-            <div className={styles['modal-header']}>
-              <h3 className={styles['modal-title']}>Add New Patient</h3>
-              <button onClick={() => setShowAddPatientModal(false)} className={styles['modal-close-btn']}>
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div className="modal-header">
+              <h3 className="modal-title">Add New Patient</h3>
+              <button onClick={() => setShowAddPatientModal(false)} className="modal-close-btn">
                 <X size={20} />
               </button>
             </div>
-            <div className={styles['modal-form-grid']}>
+            <div className="modal-form-grid">
               <div>
-                <label className={styles['modal-label']}>First Name *</label>
+                <label className="modal-label">First Name *</label>
                 <input
                   type="text"
                   placeholder="First name"
                   value={newPatient.firstName}
                   onChange={(e) => setNewPatient({ ...newPatient, firstName: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
               <div>
-                <label className={styles['modal-label']}>Last Name *</label>
+                <label className="modal-label">Last Name *</label>
                 <input
                   type="text"
                   placeholder="Last name"
                   value={newPatient.lastName}
                   onChange={(e) => setNewPatient({ ...newPatient, lastName: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
 
               <div>
-                <label className={styles['modal-label']}>Age *</label>
+                <label className="modal-label">Age *</label>
                 <input
                   type="number"
                   placeholder="Age"
                   value={newPatient.age}
                   onChange={(e) => setNewPatient({ ...newPatient, age: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
               <div>
-                <label className={styles['modal-label']}>Gender *</label>
+                <label className="modal-label">Gender *</label>
                 <select
                   value={newPatient.gender}
                   onChange={(e) => setNewPatient({ ...newPatient, gender: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 >
                   <option>Male</option>
                   <option>Female</option>
                 </select>
               </div>
 
-              <div className={styles['modal-form-full']}>
-                <label className={styles['modal-label']}>Address</label>
+              <div className="modal-form-full">
+                <label className="modal-label">Address</label>
                 <input
                   type="text"
                   placeholder="Barangay address"
                   value={newPatient.address}
                   onChange={(e) => setNewPatient({ ...newPatient, address: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
-              <div className={styles['modal-form-full']}>
-                <label className={styles['modal-label']}>Email</label>
+              <div className="modal-form-full">
+                <label className="modal-label">Email</label>
                 <input
                   type="email"
                   placeholder="Email address"
                   value={newPatient.email}
                   onChange={(e) => setNewPatient({ ...newPatient, email: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
             </div>
-            <div className={styles['modal-footer']}>
-              <button onClick={() => setShowAddPatientModal(false)} className={styles['btn-cancel']}>
+            <div className="modal-footer">
+              <button onClick={() => setShowAddPatientModal(false)} className="btn-cancel">
                 Cancel
               </button>
-              <button onClick={handleAddPatient} className={styles['btn-save']}>
+              <button onClick={handleAddPatient} className="btn-save">
                 Add Patient
               </button>
             </div>
@@ -903,79 +917,79 @@ export default function AdminDashboard() {
 
       {/* Edit Patient Modal */}
       {showEditPatientModal && editingPatient && (
-        <div className={styles['modal-overlay']}>
-          <div className={styles['modal-box']}>
-            <div className={styles['modal-header']}>
-              <h3 className={styles['modal-title']}>Edit Patient</h3>
-              <button onClick={() => setShowEditPatientModal(false)} className={styles['modal-close-btn']}>
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div className="modal-header">
+              <h3 className="modal-title">Edit Patient</h3>
+              <button onClick={() => setShowEditPatientModal(false)} className="modal-close-btn">
                 <X size={20} />
               </button>
             </div>
-            <div className={styles['modal-form-grid']}>
+            <div className="modal-form-grid">
               <div>
-                <label className={styles['modal-label']}>First Name *</label>
+                <label className="modal-label">First Name *</label>
                 <input
                   type="text"
                   value={editingPatient.firstName}
                   onChange={(e) => setEditingPatient({ ...editingPatient, firstName: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
               <div>
-                <label className={styles['modal-label']}>Last Name *</label>
+                <label className="modal-label">Last Name *</label>
                 <input
                   type="text"
                   value={editingPatient.lastName}
                   onChange={(e) => setEditingPatient({ ...editingPatient, lastName: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
 
               <div>
-                <label className={styles['modal-label']}>Age *</label>
+                <label className="modal-label">Age *</label>
                 <input
                   type="number"
                   value={editingPatient.age}
                   onChange={(e) => setEditingPatient({ ...editingPatient, age: parseInt(e.target.value) })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
               <div>
-                <label className={styles['modal-label']}>Gender *</label>
+                <label className="modal-label">Gender *</label>
                 <select
                   value={editingPatient.gender}
                   onChange={(e) => setEditingPatient({ ...editingPatient, gender: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 >
                   <option>Male</option>
                   <option>Female</option>
                 </select>
               </div>
 
-              <div className={styles['modal-form-full']}>
-                <label className={styles['modal-label']}>Address</label>
+              <div className="modal-form-full">
+                <label className="modal-label">Address</label>
                 <input
                   type="text"
                   value={editingPatient.address}
                   onChange={(e) => setEditingPatient({ ...editingPatient, address: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
-              <div className={styles['modal-form-full']}>
-                <label className={styles['modal-label']}>Email</label>
+              <div className="modal-form-full">
+                <label className="modal-label">Email</label>
                 <input
                   type="email"
                   value={editingPatient.email}
                   onChange={(e) => setEditingPatient({ ...editingPatient, email: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
             </div>
-            <div className={styles['modal-footer']}>
-              <button onClick={() => setShowEditPatientModal(false)} className={styles['btn-cancel']}>
+            <div className="modal-footer">
+              <button onClick={() => setShowEditPatientModal(false)} className="btn-cancel">
                 Cancel
               </button>
-              <button onClick={handleEditPatient} className={styles['btn-save']}>
+              <button onClick={handleEditPatient} className="btn-save">
                 Save Changes
               </button>
             </div>
@@ -985,152 +999,152 @@ export default function AdminDashboard() {
 
       {/* Add Vital Signs Modal */}
       {showAddVitalModal && (
-        <div className={styles['modal-overlay']}>
-          <div className={styles['modal-box']} style={{ maxWidth: '600px' }}>
-            <div className={styles['modal-header']}>
-              <h3 className={styles['modal-title']}>Add Vital Signs</h3>
-              <button onClick={() => setShowAddVitalModal(false)} className={styles['modal-close-btn']}>
+        <div className="modal-overlay">
+          <div className="modal-box" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Add Vital Signs</h3>
+              <button onClick={() => setShowAddVitalModal(false)} className="modal-close-btn">
                 <X size={20} />
               </button>
             </div>
-            <div className={styles['modal-form-grid']}>
+            <div className="modal-form-grid">
 
               {/* Patient Selection - Full Width */}
-              <div className={styles['modal-form-full']}>
-                <label className={styles['modal-label']}>Select Patient *</label>
+              <div className="modal-form-full">
+                <label className="modal-label">Select Patient *</label>
                 <select
                   value={newVital.patientId}
                   onChange={(e) => setNewVital({ ...newVital, patientId: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 >
                   <option value="">-- Select a patient --</option>
                   {patients.map(p => (
-                    <option key={p.id} value={p.id}>P-{String(p.id).padStart(3, '0')} - {p.firstName} {p.lastName}</option>
+                    <option key={p.id} value={p.id}>{p.id} - {p.firstName} {p.lastName}</option>
                   ))}
                 </select>
               </div>
 
               {/* Date and Time */}
               <div>
-                <label className={styles['modal-label']}>Date *</label>
+                <label className="modal-label">Date *</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type="date"
                     value={newVital.date}
                     onChange={(e) => setNewVital({ ...newVital, date: e.target.value })}
-                    className={styles['modal-input']}
+                    className="modal-input"
                   />
                 </div>
               </div>
               <div>
-                <label className={styles['modal-label']}>Time *</label>
+                <label className="modal-label">Time *</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type="time"
                     value={newVital.time}
                     onChange={(e) => setNewVital({ ...newVital, time: e.target.value })}
-                    className={styles['modal-input']}
+                    className="modal-input"
                   />
                 </div>
               </div>
 
               {/* Blood Pressure */}
               <div>
-                <label className={styles['modal-label']}>Systolic (mmHg) *</label>
+                <label className="modal-label">Systolic (mmHg) *</label>
                 <input
                   type="number"
                   placeholder="e.g., 120"
                   value={newVital.systolic}
                   onChange={(e) => setNewVital({ ...newVital, systolic: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
               <div>
-                <label className={styles['modal-label']}>Diastolic (mmHg) *</label>
+                <label className="modal-label">Diastolic (mmHg) *</label>
                 <input
                   type="number"
                   placeholder="e.g., 80"
                   value={newVital.diastolic}
                   onChange={(e) => setNewVital({ ...newVital, diastolic: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
 
               {/* Heart Rate and Temperature */}
               <div>
-                <label className={styles['modal-label']}>Heart Rate (bpm) *</label>
+                <label className="modal-label">Heart Rate (bpm) *</label>
                 <input
                   type="number"
                   placeholder="e.g., 72"
                   value={newVital.heartRate}
                   onChange={(e) => setNewVital({ ...newVital, heartRate: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
               <div>
-                <label className={styles['modal-label']}>Temperature (°C) *</label>
+                <label className="modal-label">Temperature (°C) *</label>
                 <input
                   type="number"
                   step="0.1"
                   placeholder="e.g., 36.5"
                   value={newVital.temperature}
                   onChange={(e) => setNewVital({ ...newVital, temperature: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
 
               {/* SpO2 and Respiratory Rate */}
               <div>
-                <label className={styles['modal-label']}>SpO₂ (%)</label>
+                <label className="modal-label">SpO₂ (%)</label>
                 <input
                   type="number"
                   placeholder="e.g., 98"
                   value={newVital.spO2}
                   onChange={(e) => setNewVital({ ...newVital, spO2: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
               <div>
-                <label className={styles['modal-label']}>Respiratory Rate (breaths/min)</label>
+                <label className="modal-label">Respiratory Rate (breaths/min)</label>
                 <input
                   type="number"
                   placeholder="e.g., 16"
                   value={newVital.respiratoryRate}
                   onChange={(e) => setNewVital({ ...newVital, respiratoryRate: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
 
               {/* Weight and Height */}
               <div>
-                <label className={styles['modal-label']}>Weight (kg)</label>
+                <label className="modal-label">Weight (kg)</label>
                 <input
                   type="number"
                   step="0.1"
                   placeholder="e.g., 65.5"
                   value={newVital.weight}
                   onChange={(e) => setNewVital({ ...newVital, weight: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
               <div>
-                <label className={styles['modal-label']}>Height (cm)</label>
+                <label className="modal-label">Height (cm)</label>
                 <input
                   type="number"
                   step="0.1"
                   placeholder="e.g., 165"
                   value={newVital.height}
                   onChange={(e) => setNewVital({ ...newVital, height: e.target.value })}
-                  className={styles['modal-input']}
+                  className="modal-input"
                 />
               </div>
 
               {/* Footer Buttons - Full Width */}
-              <div className={styles['modal-form-full']} style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+              <div className="modal-form-full" style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                 <button
                   type="button"
                   onClick={() => setShowAddVitalModal(false)}
-                  className={styles['btn-cancel']}
+                  className="btn-cancel"
                   style={{ flex: 1 }}
                 >
                   Cancel
@@ -1138,7 +1152,7 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={handleAddVital}
-                  className={styles['btn-save']}
+                  className="btn-save"
                   style={{ flex: 1 }}
                 >
                   Save Vital Signs
@@ -1151,110 +1165,110 @@ export default function AdminDashboard() {
 
       {/* View Vital Signs Modal */}
       {showViewVitalModal && selectedVital && (
-        <div className={`${styles['fixed']} ${styles['inset-0']} ${styles['z-50']} ${styles['flex']} ${styles['items-center']} ${styles['justify-center']} ${styles['p-4']}`} style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className={`${styles['bg-white']} ${styles['rounded-2xl']} ${styles['p-6']} ${styles['w-full']} ${styles['max-w-2xl']} ${styles['shadow-2xl']} ${styles['max-h-[90vh]']} ${styles['overflow-y-auto']}`}>
-            <div className={`${styles['flex']} ${styles['items-center']} ${styles['justify-between']} ${styles['mb-5']}`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 style={{ fontWeight: 700, color: "#333333" }}>Vital Signs Record</h3>
-                <p className={`${styles['text-xs']} ${styles['mt-1']}`} style={{ color: "#888" }}>{selectedVital.patientName} - {selectedVital.date} {selectedVital.time}</p>
+                <p className="text-xs mt-1" style={{ color: "#888" }}>{selectedVital.patientName} - {selectedVital.date} {selectedVital.time}</p>
               </div>
               <button onClick={() => setShowViewVitalModal(false)} style={{ color: "#888" }}>
                 <X size={20} />
               </button>
             </div>
 
-            <div className={`${styles['grid']} ${styles['grid-cols-2']} ${styles['gap-4']}`}>
+            <div className="grid grid-cols-2 gap-4">
               {/* Blood Pressure */}
-              <div className={`${styles['bg-gray-50']} ${styles['rounded-xl']} ${styles['p-4']}`}>
-                <div className={`${styles['flex']} ${styles['items-center']} ${styles['gap-2']} ${styles['mb-2']}`}>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
                   <Activity size={18} style={{ color: "#C23B21" }} />
-                  <span className={styles['text-xs']} style={{ color: "#888", fontWeight: 600 }}>Blood Pressure</span>
+                  <span className="text-xs" style={{ color: "#888", fontWeight: 600 }}>Blood Pressure</span>
                 </div>
                 <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#C23B21" }}>
                   {selectedVital.systolic}/{selectedVital.diastolic}
                 </div>
-                <div className={styles['text-xs']} style={{ color: "#888" }}>mmHg</div>
+                <div className="text-xs" style={{ color: "#888" }}>mmHg</div>
               </div>
 
               {/* Heart Rate */}
-              <div className={`${styles['bg-gray-50']} ${styles['rounded-xl']} ${styles['p-4']}`}>
-                <div className={`${styles['flex']} ${styles['items-center']} ${styles['gap-2']} ${styles['mb-2']}`}>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
                   <Heart size={18} style={{ color: "#2E5895" }} />
-                  <span className={styles['text-xs']} style={{ color: "#888", fontWeight: 600 }}>Heart Rate</span>
+                  <span className="text-xs" style={{ color: "#888", fontWeight: 600 }}>Heart Rate</span>
                 </div>
                 <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#2E5895" }}>
                   {selectedVital.heartRate}
                 </div>
-                <div className={styles['text-xs']} style={{ color: "#888" }}>bpm</div>
+                <div className="text-xs" style={{ color: "#888" }}>bpm</div>
               </div>
 
               {/* Temperature */}
-              <div className={`${styles['bg-gray-50']} ${styles['rounded-xl']} ${styles['p-4']}`}>
-                <div className={`${styles['flex']} ${styles['items-center']} ${styles['gap-2']} ${styles['mb-2']}`}>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
                   <Thermometer size={18} style={{ color: "#FFC32B" }} />
-                  <span className={styles['text-xs']} style={{ color: "#888", fontWeight: 600 }}>Temperature</span>
+                  <span className="text-xs" style={{ color: "#888", fontWeight: 600 }}>Temperature</span>
                 </div>
                 <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#b8820a" }}>
                   {selectedVital.temperature}
                 </div>
-                <div className={styles['text-xs']} style={{ color: "#888" }}>°C</div>
+                <div className="text-xs" style={{ color: "#888" }}>°C</div>
               </div>
 
               {/* SpO2 */}
-              <div className={`${styles['bg-gray-50']} ${styles['rounded-xl']} ${styles['p-4']}`}>
-                <div className={`${styles['flex']} ${styles['items-center']} ${styles['gap-2']} ${styles['mb-2']}`}>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
                   <Droplets size={18} style={{ color: "#2E5895" }} />
-                  <span className={styles['text-xs']} style={{ color: "#888", fontWeight: 600 }}>SpO₂</span>
+                  <span className="text-xs" style={{ color: "#888", fontWeight: 600 }}>SpO₂</span>
                 </div>
                 <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#2E5895" }}>
                   {selectedVital.spO2}
                 </div>
-                <div className={styles['text-xs']} style={{ color: "#888" }}>%</div>
+                <div className="text-xs" style={{ color: "#888" }}>%</div>
               </div>
 
               {/* Respiratory Rate */}
-              <div className={`${styles['bg-gray-50']} ${styles['rounded-xl']} ${styles['p-4']}`}>
-                <div className={`${styles['flex']} ${styles['items-center']} ${styles['gap-2']} ${styles['mb-2']}`}>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
                   <Wind size={18} style={{ color: "#C23B21" }} />
-                  <span className={styles['text-xs']} style={{ color: "#888", fontWeight: 600 }}>Respiratory Rate</span>
+                  <span className="text-xs" style={{ color: "#888", fontWeight: 600 }}>Respiratory Rate</span>
                 </div>
                 <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#C23B21" }}>
                   {selectedVital.respiratoryRate}
                 </div>
-                <div className={styles['text-xs']} style={{ color: "#888" }}>breaths/min</div>
+                <div className="text-xs" style={{ color: "#888" }}>breaths/min</div>
               </div>
 
               {/* BMI */}
-              <div className={`${styles['bg-gray-50']} ${styles['rounded-xl']} ${styles['p-4']}`}>
-                <div className={`${styles['flex']} ${styles['items-center']} ${styles['gap-2']} ${styles['mb-2']}`}>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
                   <Users size={18} style={{ color: "#FFC32B" }} />
-                  <span className={styles['text-xs']} style={{ color: "#888", fontWeight: 600 }}>BMI</span>
+                  <span className="text-xs" style={{ color: "#888", fontWeight: 600 }}>BMI</span>
                 </div>
                 <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#b8820a" }}>
                   {selectedVital.weight > 0 && selectedVital.height > 0
                     ? calculateBMI(selectedVital.weight, selectedVital.height)
                     : "N/A"}
                 </div>
-                <div className={styles['text-xs']} style={{ color: "#888" }}>
+                <div className="text-xs" style={{ color: "#888" }}>
                   {selectedVital.weight}kg / {selectedVital.height}cm
                 </div>
               </div>
             </div>
 
             {/* Status Badge */}
-            <div className={`${styles['mt-4']} ${styles['p-4']} ${styles['rounded-xl']}`} style={{ backgroundColor: "#F2F3F5" }}>
-              <div className={`${styles['flex']} ${styles['items-center']} ${styles['justify-between']}`}>
-                <span className={styles['text-xs']} style={{ color: "#555", fontWeight: 600 }}>Health Status</span>
+            <div className="mt-4 p-4 rounded-xl" style={{ backgroundColor: "#F2F3F5" }}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: "#555", fontWeight: 600 }}>Health Status</span>
                 <StatusBadge status={getStatus(selectedVital.systolic, selectedVital.diastolic)} />
               </div>
-              <div className={`${styles['text-xs']} ${styles['mt-2']}`} style={{ color: "#888" }}>
+              <div className="text-xs mt-2" style={{ color: "#888" }}>
                 Recorded by: {selectedVital.recordedBy}
               </div>
             </div>
 
             <button
               onClick={() => setShowViewVitalModal(false)}
-              className={`${styles['w-full']} ${styles['mt-4']} ${styles['py-2.5']} ${styles['rounded-lg']} ${styles['text-sm']} ${styles['text-white']}`}
+              className="w-full mt-4 py-2.5 rounded-lg text-sm text-white"
               style={{ backgroundColor: "#2E5895", fontWeight: 600 }}
             >
               Close
