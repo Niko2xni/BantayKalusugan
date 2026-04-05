@@ -1,6 +1,7 @@
-import styles from './AdminDashboard.module.css';
 import { useState } from "react";
+import "./AdminDashboard.css";
 import { useNavigate } from "react-router-dom";
+import logo from "./assets/logo.png";
 import {
     Home,
     Users,
@@ -20,12 +21,14 @@ import {
     MapPin,
     Building,
     Check,
+    FileCheck,
 } from "lucide-react";
 
 const navItems = [
     { icon: <Home size={20} />, label: "Dashboard", id: "dashboard", path: "/admin" },
     { icon: <Users size={20} />, label: "Patients", id: "patients", path: "/admin" },
     { icon: <Activity size={20} />, label: "Vital Records", id: "records", path: "/admin" },
+    { icon: <FileCheck size={20} />, label: "Audit Logs", id: "audit", path: "/admin/audit-logs" },
     { icon: <FileText size={20} />, label: "Reports", id: "reports", path: "/admin/reports" },
     { icon: <Settings size={20} />, label: "Settings", id: "settings", path: "/admin/settings" },
 ];
@@ -90,7 +93,7 @@ export default function AdminSettings() {
     ];
 
     return (
-        <div className={styles['admin-layout']}>
+        <div className="admin-layout">
             {/* Save Notification */}
             {showSaveNotification && (
                 <div
@@ -117,28 +120,28 @@ export default function AdminSettings() {
             )}
 
             {/* Sidebar */}
-            <aside className={styles['admin-sidebar']}>
-                <div className={styles['sidebar-logo-wrap']}>
-                    {/* Empty logo as requested */}
+            <aside className="admin-sidebar">
+                <div className="sidebar-logo-wrap">
+                    <img src={logo} alt="BantayKalusugan Logo" />
                 </div>
 
-                <nav className={styles['sidebar-nav']}>
+                <nav className="sidebar-nav">
                     {navItems.map((item) => (
                         <button
                             key={item.id}
                             onClick={() => handleNavClick(item.path)}
-                            className={`${styles['sidebar-nav-btn']} ${item.id === 'settings' ? styles.active : ''}`}
+                            className={`sidebar-nav-btn ${item.id === "settings" ? "active" : ""}`}
                             title={item.label}
                         >
                             {item.icon}
-                            <span className={styles['nav-tooltip']}>{item.label}</span>
+                            <span className="nav-tooltip">{item.label}</span>
                         </button>
                     ))}
                 </nav>
 
                 <button
                     onClick={handleLogout}
-                    className={styles['sidebar-logout-btn']}
+                    className="sidebar-logout-btn"
                     title="Logout"
                 >
                     <LogOut size={20} />
@@ -146,24 +149,24 @@ export default function AdminSettings() {
             </aside>
 
             {/* Main Content */}
-            <div className={styles['admin-main']}>
+            <div className="admin-main">
                 {/* Header */}
-                <header className={styles['admin-topbar']}>
-                    <div className={styles['topbar-left']}>
-                        <h1 className={styles['topbar-title']}>Settings</h1>
-                        <p className={styles['topbar-subtitle']}>Manage your system preferences and configurations</p>
+                <header className="admin-topbar">
+                    <div className="topbar-left">
+                        <h1 className="topbar-title">Settings</h1>
+                        <p className="topbar-subtitle">Manage your system preferences and configurations</p>
                     </div>
-                    <div className={styles['topbar-right']}>
-                        <button className={styles['topbar-bell-btn']}>
+                    <div className="topbar-right">
+                        <button className="topbar-bell-btn">
                             <Bell size={20} />
-                            <span className={styles['bell-dot']} />
+                            <span className="bell-dot" />
                         </button>
-                        <div className={styles['topbar-avatar']}>
-                            <div className={styles['topbar-avatar-circle']}>
+                        <div className="topbar-avatar">
+                            <div className="topbar-avatar-circle">
                                 AS
                             </div>
-                            <div className={styles['topbar-avatar-info']}>
-                                <span className={styles['topbar-avatar-name']}>Admin Staff</span>
+                            <div className="topbar-avatar-info">
+                                <span className="topbar-avatar-name">Admin Staff</span>
                                 <span style={{ fontSize: "0.75rem", color: "#888" }}>Administrator</span>
                             </div>
                             <ChevronDown size={16} style={{ color: "#888", marginLeft: "0.25rem" }} />
@@ -172,7 +175,7 @@ export default function AdminSettings() {
                 </header>
 
                 {/* Content */}
-                <main className={styles['admin-body']}>
+                <main className="admin-body">
                     <div style={{ maxWidth: "64rem", margin: "0 auto", width: "100%" }}>
                         {/* Tabs - adapted to use settings-tabs if we add them, but for now inline */}
                         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", paddingBottom: "0.5rem", overflowX: "auto" }}>
@@ -204,7 +207,7 @@ export default function AdminSettings() {
 
                         {/* Profile Settings */}
                         {activeTab === "profile" && (
-                            <div className={styles['chart-card']} style={{ width: "100%" }}>
+                            <div className="chart-card" style={{ width: "100%" }}>
                                 <h2 style={{ fontSize: "1.125rem", marginBottom: "1rem", color: "#333", fontWeight: 700 }}>
                                     Profile Information
                                 </h2>
@@ -282,7 +285,7 @@ export default function AdminSettings() {
 
                         {/* Barangay Info */}
                         {activeTab === "barangay" && (
-                            <div className={styles['chart-card']} style={{ width: "100%" }}>
+                            <div className="chart-card" style={{ width: "100%" }}>
                                 <h2 style={{ fontSize: "1.125rem", marginBottom: "1rem", color: "#333", fontWeight: 700 }}>
                                     Barangay Information
                                 </h2>
@@ -377,7 +380,7 @@ export default function AdminSettings() {
 
                         {/* System Settings */}
                         {activeTab === "system" && (
-                            <div className={styles['chart-card']} style={{ width: "100%" }}>
+                            <div className="chart-card" style={{ width: "100%" }}>
                                 <h2 style={{ fontSize: "1.125rem", marginBottom: "1rem", color: "#333", fontWeight: 700 }}>
                                     System Preferences
                                 </h2>
@@ -466,7 +469,7 @@ export default function AdminSettings() {
 
                         {/* Security Settings */}
                         {activeTab === "security" && (
-                            <div className={styles['chart-card']} style={{ width: "100%" }}>
+                            <div className="chart-card" style={{ width: "100%" }}>
                                 <h2 style={{ fontSize: "1.125rem", marginBottom: "1rem", color: "#333", fontWeight: 700 }}>
                                     Security & Password
                                 </h2>

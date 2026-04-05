@@ -1,6 +1,7 @@
-import styles from './AdminDashboard.module.css';
 import { useState } from "react";
+import "./AdminDashboard.css";
 import { useNavigate } from "react-router-dom";
+import logo from "./assets/logo.png";
 import {
     Home,
     Users,
@@ -18,6 +19,7 @@ import {
     BarChart3,
     FileBarChart,
     Heart,
+    FileCheck,
 } from "lucide-react";
 import {
     BarChart,
@@ -39,6 +41,7 @@ const navItems = [
     { icon: <Home size={20} />, label: "Dashboard", id: "dashboard", path: "/admin" },
     { icon: <Users size={20} />, label: "Patients", id: "patients", path: "/admin" },
     { icon: <Activity size={20} />, label: "Vital Records", id: "records", path: "/admin" },
+    { icon: <FileCheck size={20} />, label: "Audit Logs", id: "audit", path: "/admin/audit-logs" },
     { icon: <FileText size={20} />, label: "Reports", id: "reports", path: "/admin/reports" },
     { icon: <Settings size={20} />, label: "Settings", id: "settings", path: "/admin/settings" },
 ];
@@ -81,30 +84,30 @@ export default function AdminReports() {
     };
 
     return (
-        <div className={styles['admin-layout']}>
+        <div className="admin-layout">
             {/* Sidebar */}
-            <aside className={styles['admin-sidebar']}>
-                <div className={styles['sidebar-logo-wrap']}>
-                    {/* Empty logo as requested */}
+            <aside className="admin-sidebar">
+                <div className="sidebar-logo-wrap">
+                    <img src={logo} alt="BantayKalusugan Logo" />
                 </div>
 
-                <nav className={styles['sidebar-nav']}>
+                <nav className="sidebar-nav">
                     {navItems.map((item) => (
                         <button
                             key={item.id}
                             onClick={() => handleNavClick(item.path)}
-                            className={`${styles['sidebar-nav-btn']} ${item.id === 'reports' ? styles.active : ''}`}
+                            className={`sidebar-nav-btn ${item.id === "reports" ? "active" : ""}`}
                             title={item.label}
                         >
                             {item.icon}
-                            <span className={styles['nav-tooltip']}>{item.label}</span>
+                            <span className="nav-tooltip">{item.label}</span>
                         </button>
                     ))}
                 </nav>
 
                 <button
                     onClick={handleLogout}
-                    className={styles['sidebar-logout-btn']}
+                    className="sidebar-logout-btn"
                     title="Logout"
                 >
                     <LogOut size={20} />
@@ -112,24 +115,24 @@ export default function AdminReports() {
             </aside>
 
             {/* Main Content */}
-            <div className={styles['admin-main']}>
+            <div className="admin-main">
                 {/* Header */}
-                <header className={styles['admin-topbar']}>
-                    <div className={styles['topbar-left']}>
-                        <h1 className={styles['topbar-title']}>Reports & Analytics</h1>
-                        <p className={styles['topbar-subtitle']}>Generate and view health monitoring reports</p>
+                <header className="admin-topbar">
+                    <div className="topbar-left">
+                        <h1 className="topbar-title">Reports & Analytics</h1>
+                        <p className="topbar-subtitle">Generate and view health monitoring reports</p>
                     </div>
-                    <div className={styles['topbar-right']}>
-                        <button className={styles['topbar-bell-btn']}>
+                    <div className="topbar-right">
+                        <button className="topbar-bell-btn">
                             <Bell size={20} />
-                            <span className={styles['bell-dot']} />
+                            <span className="bell-dot" />
                         </button>
-                        <div className={styles['topbar-avatar']}>
-                            <div className={styles['topbar-avatar-circle']}>
+                        <div className="topbar-avatar">
+                            <div className="topbar-avatar-circle">
                                 AS
                             </div>
-                            <div className={styles['topbar-avatar-info']}>
-                                <span className={styles['topbar-avatar-name']}>Admin Staff</span>
+                            <div className="topbar-avatar-info">
+                                <span className="topbar-avatar-name">Admin Staff</span>
                                 <span style={{ fontSize: "0.75rem", color: "#888" }}>Administrator</span>
                             </div>
                             <ChevronDown size={16} style={{ color: "#888", marginLeft: "0.25rem" }} />
@@ -138,9 +141,9 @@ export default function AdminReports() {
                 </header>
 
                 {/* Content */}
-                <main className={styles['admin-body']}>
+                <main className="admin-body">
                     {/* Report Controls */}
-                    <div className={`${styles['bg-white']} ${styles['rounded-xl']} ${styles['p-6']} ${styles['shadow-sm']} ${styles['mb-6']}`} style={{ borderRadius: "1rem", backgroundColor: "#fff", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", marginBottom: "1.5rem" }}>
+                    <div className="bg-white rounded-xl p-6 shadow-sm mb-6" style={{ borderRadius: "1rem", backgroundColor: "#fff", padding: "1.5rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", marginBottom: "1.5rem" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                                 <div style={{ display: "flex", flexDirection: "column" }}>
@@ -187,40 +190,40 @@ export default function AdminReports() {
                     </div>
 
                     {/* Key Metrics */}
-                    <div className={styles['stat-cards-row']} style={{ marginBottom: "1.5rem" }}>
+                    <div className="stat-cards-row" style={{ marginBottom: "1.5rem" }}>
                         {[
                             { label: "Total Patients", value: "100", change: "+12%", icon: <Users size={24} />, color: "#2E5895" },
                             { label: "Total Visits", value: "189", change: "+8%", icon: <Activity size={24} />, color: "#FFC32B" },
                             { label: "Avg Blood Pressure", value: "125/82", change: "-3%", icon: <Heart size={24} />, color: "#C23B21" },
                             { label: "Reports Generated", value: "24", change: "+15%", icon: <FileText size={24} />, color: "#F7E976" },
                         ].map((metric, idx) => (
-                            <div key={idx} className={styles['stat-card']}>
+                            <div key={idx} className="stat-card">
                                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "0.75rem" }}>
                                     <div
-                                        className={styles['stat-card-icon']}
+                                        className="stat-card-icon"
                                         style={{ backgroundColor: `${metric.color}20`, color: metric.color }}
                                     >
                                         {metric.icon}
                                     </div>
-                                    <div className={styles['stat-card-change']} style={{ color: metric.change.startsWith('+') ? "#2E5895" : "#C23B21", backgroundColor: "transparent" }}>
+                                    <div className="stat-card-change" style={{ color: metric.change.startsWith('+') ? "#2E5895" : "#C23B21", backgroundColor: "transparent" }}>
                                         {metric.change.startsWith('+') ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                                         {metric.change}
                                     </div>
                                 </div>
-                                <div className={styles['stat-card-body']}>
-                                    <div className={styles['stat-card-label']}>{metric.label}</div>
-                                    <div className={styles['stat-card-value']}>{metric.value}</div>
+                                <div className="stat-card-body">
+                                    <div className="stat-card-label">{metric.label}</div>
+                                    <div className="stat-card-value">{metric.value}</div>
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     {/* Charts Grid */}
-                    <div className={styles['charts-row']} style={{ marginBottom: "1.5rem" }}>
+                    <div className="charts-row" style={{ marginBottom: "1.5rem" }}>
                         {/* Monthly Trends */}
-                        <div className={styles['chart-card']}>
-                            <div className={styles['chart-card-header']} style={{ marginBottom: "1rem" }}>
-                                <h3 className={styles['chart-card-title']}>Monthly Patient Trends</h3>
+                        <div className="chart-card">
+                            <div className="chart-card-header" style={{ marginBottom: "1rem" }}>
+                                <h3 className="chart-card-title">Monthly Patient Trends</h3>
                                 <BarChart3 size={20} color="#888" />
                             </div>
                             <ResponsiveContainer width="100%" height={250}>
@@ -236,9 +239,9 @@ export default function AdminReports() {
                         </div>
 
                         {/* Health Condition Distribution */}
-                        <div className={styles['chart-card']}>
-                            <div className={styles['chart-card-header']} style={{ marginBottom: "1rem" }}>
-                                <h3 className={styles['chart-card-title']}>Health Condition Distribution</h3>
+                        <div className="chart-card">
+                            <div className="chart-card-header" style={{ marginBottom: "1rem" }}>
+                                <h3 className="chart-card-title">Health Condition Distribution</h3>
                                 <FileBarChart size={20} color="#888" />
                             </div>
                             <ResponsiveContainer width="100%" height={250}>
@@ -263,9 +266,9 @@ export default function AdminReports() {
                         </div>
 
                         {/* Average BP Trends */}
-                        <div className={styles['chart-card']}>
-                            <div className={styles['chart-card-header']} style={{ marginBottom: "1rem" }}>
-                                <h3 className={styles['chart-card-title']}>Average Blood Pressure Trend</h3>
+                        <div className="chart-card">
+                            <div className="chart-card-header" style={{ marginBottom: "1rem" }}>
+                                <h3 className="chart-card-title">Average Blood Pressure Trend</h3>
                                 <Activity size={20} color="#888" />
                             </div>
                             <ResponsiveContainer width="100%" height={250}>
@@ -281,9 +284,9 @@ export default function AdminReports() {
                         </div>
 
                         {/* Age Distribution */}
-                        <div className={styles['chart-card']}>
-                            <div className={styles['chart-card-header']} style={{ marginBottom: "1rem" }}>
-                                <h3 className={styles['chart-card-title']}>Patient Age Distribution</h3>
+                        <div className="chart-card">
+                            <div className="chart-card-header" style={{ marginBottom: "1rem" }}>
+                                <h3 className="chart-card-title">Patient Age Distribution</h3>
                                 <Users size={20} color="#888" />
                             </div>
                             <ResponsiveContainer width="100%" height={250}>
@@ -299,12 +302,12 @@ export default function AdminReports() {
                     </div>
 
                     {/* Summary Table */}
-                    <div className={styles['table-card']}>
-                        <div className={styles['table-card-header']}>
-                            <h3 className={styles['table-card-title']}>Monthly Summary</h3>
+                    <div className="table-card">
+                        <div className="table-card-header">
+                            <h3 className="table-card-title">Monthly Summary</h3>
                         </div>
-                        <div className={styles['table-wrapper']}>
-                            <table className={styles['data-table']}>
+                        <div className="table-wrapper">
+                            <table className="data-table">
                                 <thead>
                                     <tr>
                                         <th>Month</th>
