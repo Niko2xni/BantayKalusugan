@@ -3,6 +3,7 @@ import { Send } from 'lucide-react';
 import Layout from './Layout.jsx';
 import styles from './user_dashboard.module.css';
 import { fetchChatMessages, sendChatMessage } from './utils/patientPortalApi';
+import { notifyNotificationsRefresh } from './utils/notificationSync';
 
 
 function formatTime(isoTimestamp) {
@@ -60,6 +61,7 @@ const ChatPage = () => {
       });
 
       setMessages((prev) => [...prev, ...posted]);
+      notifyNotificationsRefresh('chat-message-sent');
       if (textOverride === null) {
         setDraft('');
       }

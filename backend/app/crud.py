@@ -705,14 +705,6 @@ def create_chat_message_with_reply(
     db.add(user_message)
     db.flush()
 
-    bot_message = models.ChatMessage(
-        user_id=user_id,
-        sender_type="bot",
-        message=_build_bot_reply(db, user_id=user_id, message=message_text, channel=payload.channel),
-        channel=payload.channel,
-    )
-    db.add(bot_message)
-
     _create_notification(
         db,
         user_id=user_id,
@@ -720,6 +712,14 @@ def create_chat_message_with_reply(
         body="A new support reply has been added to your chat.",
         kind="chat",
     )
+
+    bot_message = models.ChatMessage(
+        user_id=user_id,
+        sender_type="bot",
+        message=_build_bot_reply(db, user_id=user_id, message=message_text, channel=payload.channel),
+        channel=payload.channel,
+    )
+    db.add(bot_message)
 
     db.commit()
     db.refresh(user_message)

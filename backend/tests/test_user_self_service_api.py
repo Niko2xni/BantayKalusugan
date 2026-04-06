@@ -427,7 +427,14 @@ def test_patient_chat_schedule_reply_is_human_readable_and_mentions_unread_notif
     bot_reply = payload[1]["message"]
     assert "Your next appointment is General Consultation" in bot_reply
     assert "Its current status is Confirmed." in bot_reply
-    assert "unread notifications" in bot_reply
+    assert "3 unread notifications" in bot_reply
+
+    unread_response = client.get(
+        "/api/me/notifications?only_unread=true",
+        headers=_auth_headers(patient),
+    )
+    assert unread_response.status_code == 200
+    assert len(unread_response.json()) == 3
 
 
 def test_patient_chat_confirmation_reply_summarizes_pending_and_confirmed(

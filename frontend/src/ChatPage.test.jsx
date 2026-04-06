@@ -6,6 +6,7 @@ import ChatPage from "./ChatPage";
 
 const mockFetchChatMessages = vi.fn();
 const mockSendChatMessage = vi.fn();
+const mockNotifyNotificationsRefresh = vi.fn();
 
 vi.mock("./Layout.jsx", () => ({
   default: ({ children }) => <div>{children}</div>,
@@ -14,6 +15,10 @@ vi.mock("./Layout.jsx", () => ({
 vi.mock("./utils/patientPortalApi", () => ({
   fetchChatMessages: (...args) => mockFetchChatMessages(...args),
   sendChatMessage: (...args) => mockSendChatMessage(...args),
+}));
+
+vi.mock("./utils/notificationSync", () => ({
+  notifyNotificationsRefresh: (...args) => mockNotifyNotificationsRefresh(...args),
 }));
 
 describe("ChatPage", () => {
@@ -81,6 +86,8 @@ describe("ChatPage", () => {
       });
     });
 
+    expect(mockNotifyNotificationsRefresh).toHaveBeenCalledWith("chat-message-sent");
+
     expect(await screen.findByText("Use the Schedules page for appointment actions.")).toBeInTheDocument();
   });
 
@@ -98,5 +105,7 @@ describe("ChatPage", () => {
         channel: "support",
       });
     });
+
+    expect(mockNotifyNotificationsRefresh).toHaveBeenCalledWith("chat-message-sent");
   });
 });

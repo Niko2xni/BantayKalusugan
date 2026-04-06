@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown } from 'lucide-react';
 import logo from '../assets/logo.png';
@@ -9,6 +9,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../utils/patientPortalApi';
+import { subscribeToNotificationsRefresh } from '../utils/notificationSync';
 
 
 function formatRelativeTime(isoTimestamp) {
@@ -51,7 +52,7 @@ const Header = () => {
   const dropdownRef = useRef(null);
 
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     setNotificationsLoading(true);
     setNotificationsError('');
     try {
@@ -62,7 +63,7 @@ const Header = () => {
     } finally {
       setNotificationsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -82,7 +83,13 @@ const Header = () => {
     }, 60000);
 
     return () => window.clearInterval(intervalId);
-  }, []);
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    return subscribeToNotificationsRefresh(() => {
+      loadNotifications();
+    });
+  }, [loadNotifications]);
 
   const unreadCount = notifications.filter((item) => !item.is_read).length;
 

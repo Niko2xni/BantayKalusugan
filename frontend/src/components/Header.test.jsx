@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { notifyNotificationsRefresh } from "../utils/notificationSync";
 
 import Header from "./Header";
 
@@ -87,6 +88,22 @@ describe("Header notifications", () => {
 
     await waitFor(() => {
       expect(mockMarkNotificationRead).toHaveBeenCalledWith(11);
+    });
+  });
+
+  it("refreshes notifications when sync event is dispatched", async () => {
+    renderHeader();
+
+    await waitFor(() => {
+      expect(mockFetchNotifications).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      notifyNotificationsRefresh("chat-message-sent");
+    });
+
+    await waitFor(() => {
+      expect(mockFetchNotifications).toHaveBeenCalledTimes(2);
     });
   });
 });
