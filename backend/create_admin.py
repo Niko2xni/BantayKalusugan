@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.database import SessionLocal
 from app import models
+from app.security import get_password_hash
 
 def create_admin():
     print("=" * 50)
@@ -51,8 +52,7 @@ def create_admin():
         print("\n❌ Error: Password must be at least 8 characters.")
         return
 
-    # TODO: In production, use proper hashing with passlib
-    fake_hashed_password = password + "_hashed"
+    hashed_password = get_password_hash(password)
 
     db = SessionLocal()
 
@@ -74,7 +74,7 @@ def create_admin():
             sex=sex,
             address=address,
             barangay=barangay,
-            hashed_password=fake_hashed_password,
+            hashed_password=hashed_password,
             role="admin",
             is_active=True,
         )

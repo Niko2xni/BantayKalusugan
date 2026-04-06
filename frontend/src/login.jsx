@@ -121,14 +121,16 @@ export default function Login() {
       const data = await response.json();
 
       if (!response.ok) {
+        localStorage.removeItem("token");
         setError(data.detail || "Login failed. Please try again.");
         setLoading(false);
         return;
       }
 
       // Only navigate if we got a valid user back
-      if (data.user) {
+      if (data.user && data.access_token) {
         localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("token", data.access_token);
 
         // Route based on user role from the database
         if (data.user.role === "admin") {
@@ -137,10 +139,11 @@ export default function Login() {
           navigate("/dashboard");
         }
       } else {
+        localStorage.removeItem("token");
         setError("Login failed. Please try again.");
         setLoading(false);
       }
-    } catch (err) {
+    } catch {
       setError("Unable to connect to the server. Please try again later.");
       setLoading(false);
     }

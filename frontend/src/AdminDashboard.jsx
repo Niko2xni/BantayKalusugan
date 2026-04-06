@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import "./AdminDashboard.css";
-import { useNavigate } from "react-router-dom";
-import logo from "./assets/logo.png";
+import { useLocation } from "react-router-dom";
+import AdminSidebar from "./components/AdminSidebar";
+import { adminFetch } from "./utils/adminApi";
+
 import {
   Users,
   Activity,
@@ -9,10 +11,8 @@ import {
   Plus,
   Bell,
   ChevronDown,
-  Home,
   FileText,
   Settings,
-  LogOut,
   Eye,
   Edit2,
   Trash2,
@@ -24,7 +24,6 @@ import {
   Thermometer,
   Wind,
   Droplets,
-  FileCheck,
 } from "lucide-react";
 import {
   LineChart,
@@ -38,15 +37,6 @@ import {
   Bar,
   Legend,
 } from "recharts";
-const navItems = [
-  { icon: <Home size={20} />, label: "Dashboard", id: "dashboard", path: "/admin" },
-  { icon: <Users size={20} />, label: "Patients", id: "patients", path: "/admin" },
-  { icon: <Activity size={20} />, label: "Vital Records", id: "records", path: "/admin" },
-  { icon: <FileCheck size={20} />, label: "Audit Logs", id: "audit", path: "/admin/audit-logs" },
-  { icon: <FileText size={20} />, label: "Reports", id: "reports", path: "/admin/reports" },
-  { icon: <Settings size={20} />, label: "Settings", id: "settings", path: "/admin/settings" },
-];
-
 function StatusBadge({ status }) {
   const styles = {
     Normal: { bg: "rgba(46,88,149,0.1)", text: "#2E5895" },
@@ -76,11 +66,9 @@ function getStatus(systolic, diastolic) {
   return "Normal";
 }
 
-const API_BASE = "http://localhost:8000";
-
 export default function AdminDashboard() {
-  const navigate = useNavigate();
-  const [activeNav, setActiveNav] = useState("dashboard");
+  const location = useLocation();
+  const [activeNav, setActiveNav] = useState(location.state?.tab || "dashboard");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Patient state
@@ -101,7 +89,7 @@ export default function AdminDashboard() {
 
   // Fetch from backend
   useEffect(() => {
-    fetch(`${API_BASE}/api/patients/`)
+    adminFetch("/api/patients/")
       .then(res => res.json())
       .then(data => {
         const mapped = data.map(p => {
@@ -131,7 +119,7 @@ export default function AdminDashboard() {
       })
       .catch(err => console.error("Failed to fetch patients:", err));
 
-    fetch(`${API_BASE}/api/vitals/`)
+    adminFetch("/api/vitals/")
       .then(res => res.json())
       .then(data => {
         const mapped = data.map(v => ({
@@ -155,7 +143,7 @@ export default function AdminDashboard() {
       })
       .catch(err => console.error("Failed to fetch vitals:", err));
 
-    fetch(`${API_BASE}/api/admin/stats`)
+    adminFetch("/api/admin/stats")
       .then(res => res.json())
       .then(data => {
         setBpTrendData(data.bp_trends);
@@ -163,17 +151,6 @@ export default function AdminDashboard() {
       })
       .catch(err => console.error("Failed to fetch custom stats:", err));
   }, []);
-
-  // Update vital signs names when patients load
-  useEffect(() => {
-    if (patients.length > 0 && vitalSigns.length > 0 && vitalSigns.some(v => v.patientName === "Unknown")) {
-      setVitalSigns(prev => prev.map(v => {
-        if (v.patientName !== "Unknown") return v;
-        const p = patients.find(pat => pat.id === v.patientId);
-        return p ? { ...v, patientName: `${p.firstName} ${p.lastName}` } : v;
-      }));
-    }
-  }, [patients, vitalSigns]);
 
   // Form states for adding patient
   const [newPatient, setNewPatient] = useState({
@@ -209,6 +186,12 @@ export default function AdminDashboard() {
     return patientVitals[0];
   };
 
+  const getVitalPatientName = (vital) => {
+    if (vital.patientName && vital.patientName !== "Unknown") return vital.patientName;
+    const patient = patients.find((p) => p.id === vital.patientId);
+    return patient ? `${patient.firstName} ${patient.lastName}` : "Unknown";
+  };
+
   // Add patient
   const handleAddPatient = async () => {
     if (!newPatient.firstName || !newPatient.lastName || !newPatient.phone || !newPatient.date_of_birth) {
@@ -217,9 +200,8 @@ export default function AdminDashboard() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/api/patients/`, {
+      const response = await adminFetch("/api/patients/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           first_name: newPatient.firstName,
           last_name: newPatient.lastName,
@@ -284,9 +266,8 @@ export default function AdminDashboard() {
     if (!editingPatient) return;
 
     try {
-      const response = await fetch(`${API_BASE}/api/patients/${editingPatient.dbId}`, {
+      const response = await adminFetch(`/api/patients/${editingPatient.dbId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           first_name: editingPatient.firstName,
           last_name: editingPatient.lastName,
@@ -317,7 +298,7 @@ export default function AdminDashboard() {
       const p = patients.find(pat => pat.id === patientId);
       if (p && p.dbId) {
         try {
-          const res = await fetch(`${API_BASE}/api/patients/${p.dbId}`, { method: "DELETE" });
+          const res = await adminFetch(`/api/patients/${p.dbId}`, { method: "DELETE" });
           if (res.ok) {
             setPatients(patients.filter(pat => pat.id !== patientId));
             setVitalSigns(vitalSigns.filter(v => v.patientId !== patientId));
@@ -347,9 +328,8 @@ export default function AdminDashboard() {
     if (!patient) return;
 
     try {
-      const response = await fetch(`${API_BASE}/api/vitals/`, {
+      const response = await adminFetch("/api/vitals/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           patient_id: patient.dbId,
           date: newVital.date,
@@ -415,7 +395,7 @@ export default function AdminDashboard() {
       const v = vitalSigns.find(vital => vital.id === vitalId);
       if (v && v.dbId) {
         try {
-          const res = await fetch(`${API_BASE}/api/vitals/${v.dbId}`, { method: "DELETE" });
+          const res = await adminFetch(`/api/vitals/${v.dbId}`, { method: "DELETE" });
           if (res.ok) {
             setVitalSigns(vitalSigns.filter(vital => vital.id !== vitalId));
           } else {
@@ -459,45 +439,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="admin-layout">
-      {/* Yellow Icon Sidebar */}
-      <aside className="admin-sidebar">
-        {/* Logo */}
-        <div className="sidebar-logo-wrap">
-          <img src={logo} alt="BantayKalusugan Logo" />
-        </div>
-
-        {/* Nav Icons */}
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.path !== "/admin") {
-                  navigate(item.path);
-                } else {
-                  setActiveNav(item.id);
-                }
-              }}
-              className={`sidebar-nav-btn ${activeNav === item.id ? "active" : ""}`}
-            >
-              {item.icon}
-              <span className="nav-tooltip">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        {/* Logout */}
-        <button
-          onClick={() => {
-            // TODO: Implement logout functionality
-            alert("Logout functionality to be implemented");
-          }}
-          className="sidebar-logout-btn"
-          title="Log Out"
-        >
-          <LogOut size={20} />
-        </button>
-      </aside>
+      <AdminSidebar activeNav={activeNav} setActiveNav={setActiveNav} />
 
       {/* Main Content */}
       <div className="admin-main">
@@ -840,7 +782,7 @@ export default function AdminDashboard() {
                             <tr key={v.id}>
                               <td>{v.date}</td>
                               <td className="patient-id">{v.time}</td>
-                              <td className="patient-name">{v.patientName}</td>
+                              <td className="patient-name">{getVitalPatientName(v)}</td>
                               <td style={{ color: "#C23B21", fontWeight: 600 }}>
                                 {v.systolic}/{v.diastolic}
                               </td>
@@ -1261,7 +1203,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 style={{ fontWeight: 700, color: "#333333" }}>Vital Signs Record</h3>
-                <p className="text-xs mt-1" style={{ color: "#888" }}>{selectedVital.patientName} - {selectedVital.date} {selectedVital.time}</p>
+                <p className="text-xs mt-1" style={{ color: "#888" }}>{getVitalPatientName(selectedVital)} - {selectedVital.date} {selectedVital.time}</p>
               </div>
               <button onClick={() => setShowViewVitalModal(false)} style={{ color: "#888" }}>
                 <X size={20} />

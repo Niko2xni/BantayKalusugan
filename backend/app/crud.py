@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
+from .security import get_password_hash, verify_password
 
 # Get a single user by ID
 def get_user(db: Session, user_id: int):
@@ -19,9 +20,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 
 # Create a new user from the registration form data
 def create_user(db: Session, user: schemas.UserCreate):
-    # TODO: In production, use a proper password hashing library like passlib
-    # e.g., hashed_password = pwd_context.hash(user.password)
-    fake_hashed_password = user.password + "_hashed"
+    hashed_password = get_password_hash(user.password)
 
     db_user = models.User(
         first_name=user.first_name,
@@ -32,7 +31,7 @@ def create_user(db: Session, user: schemas.UserCreate):
         sex=user.sex,
         address=user.address,
         barangay=user.barangay,
-        hashed_password=fake_hashed_password,
+        hashed_password=hashed_password,
         is_active=True,               # Account is active immediately
     )
 
@@ -47,11 +46,22 @@ def authenticate_user(db: Session, email: str, password: str):
     user = get_user_by_email(db, email)
     if not user:
         return None
-    # TODO: In production, use passlib to verify:
-    # e.g., if not pwd_context.verify(password, user.hashed_password): return None
-    fake_hashed_password = password + "_hashed"
-    if user.hashed_password != fake_hashed_password:
+
+    if user.hashed_password == "PENDING_REGISTRATION":
         return None
+
+    # Compatibility path for legacy plain+suffix hashes. Once verified,
+    # migrate the account to bcrypt automatically.
+    legacy_hash = password + "_hashed"
+    if user.hashed_password == legacy_hash:
+        user.hashed_password = get_password_hash(password)
+        db.commit()
+        db.refresh(user)
+        return user
+
+    if not verify_password(password, user.hashed_password):
+        return None
+
     return user
 
 # --- Patient queries ---
@@ -91,7 +101,7 @@ def get_audit_logs(db: Session, skip: int = 0, limit: int = 500):
 
 # --- Admin Patient Management ---
 
-def create_user_admin(db: Session, user: schemas.AdminUserCreate, admin_id: int = 1):
+def create_user_admin(db: Session, user: schemas.AdminUserCreate, admin_id: int):
     db_user = models.User(
         first_name=user.first_name,
         last_name=user.last_name,
@@ -118,7 +128,7 @@ def create_user_admin(db: Session, user: schemas.AdminUserCreate, admin_id: int 
     )
     return db_user
 
-def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate, admin_id: int = 1):
+def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate, admin_id: int):
     db_user = get_user(db, user_id)
     if not db_user:
         return None
@@ -140,7 +150,7 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate, admi
         )
     return db_user
 
-def delete_user(db: Session, user_id: int, admin_id: int = 1):
+def delete_user(db: Session, user_id: int, admin_id: int):
     db_user = get_user(db, user_id)
     if db_user:
         name = f"{db_user.first_name} {db_user.last_name}"
@@ -162,7 +172,7 @@ def delete_user(db: Session, user_id: int, admin_id: int = 1):
 
 # --- VitalSign CRUD ---
 
-def create_vital_sign(db: Session, vital: schemas.VitalSignCreate, admin_id: int = 1):
+def create_vital_sign(db: Session, vital: schemas.VitalSignCreate, admin_id: int):
     db_vital = models.VitalSign(
         patient_id=vital.patient_id,
         date=vital.date,
@@ -198,7 +208,7 @@ def get_vital_signs(db: Session, skip: int = 0, limit: int = 500):
 def get_vital_signs_by_patient(db: Session, patient_id: int):
     return db.query(models.VitalSign).filter(models.VitalSign.patient_id == patient_id).all()
 
-def delete_vital_sign(db: Session, vital_id: int, admin_id: int = 1):
+def delete_vital_sign(db: Session, vital_id: int, admin_id: int):
     vital = db.query(models.VitalSign).filter(models.VitalSign.id == vital_id).first()
     if vital:
         patient_id = vital.patient_id

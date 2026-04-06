@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 
-from . import crud, models, schemas
+from . import crud, models, schemas, security
 from .database import engine, get_db
 
 # Create all database tables (this is a simple way, but Alembic is better for production)
@@ -43,7 +43,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if db_user:
         if db_user.hashed_password == "PENDING_REGISTRATION":
             # Claim Account flow
-            db_user.hashed_password = user.password + "_hashed"
+            db_user.hashed_password = security.get_password_hash(user.password)
             db.commit()
             db.refresh(db_user)
             return db_user
@@ -53,7 +53,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if db_phone:
         if db_phone.hashed_password == "PENDING_REGISTRATION":
             # Claim Account flow
-            db_phone.hashed_password = user.password + "_hashed"
+            db_phone.hashed_password = security.get_password_hash(user.password)
             db.commit()
             db.refresh(db_phone)
             return db_phone
@@ -78,46 +78,85 @@ def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = crud.authenticate_user(db, email=login_data.email, password=login_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    return schemas.LoginResponse(message="Login successful", user=user)
+    access_token = security.create_access_token(
+        data={"sub": str(user.id), "role": user.role}
+    )
+    return schemas.LoginResponse(
+        message="Login successful",
+        user=user,
+        access_token=access_token,
+        token_type="bearer",
+    )
 
 
 # --- Patient Endpoints (for Admin Dashboard) ---
 
 @app.get("/api/patients/", response_model=List[schemas.User])
-def read_patients(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_patients(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
     """Get only patient-role users (excludes admins)."""
     return crud.get_patients(db, skip=skip, limit=limit)
 
 @app.post("/api/patients/", response_model=schemas.User)
-def admin_create_patient(user: schemas.AdminUserCreate, db: Session = Depends(get_db)):
+def admin_create_patient(
+    user: schemas.AdminUserCreate,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     db_phone = crud.get_user_by_phone(db, phone=user.phone)
     if db_phone:
         raise HTTPException(status_code=400, detail="Phone number already registered")
-    return crud.create_user_admin(db=db, user=user)
+    return crud.create_user_admin(db=db, user=user, admin_id=current_admin.id)
 
 @app.put("/api/patients/{user_id}", response_model=schemas.User)
-def admin_update_patient(user_id: int, user_update: schemas.UserUpdate, db: Session = Depends(get_db)):
-    db_user = crud.update_user(db=db, user_id=user_id, user_update=user_update)
+def admin_update_patient(
+    user_id: int,
+    user_update: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    db_user = crud.update_user(
+        db=db,
+        user_id=user_id,
+        user_update=user_update,
+        admin_id=current_admin.id,
+    )
     if not db_user:
         raise HTTPException(status_code=404, detail="Patient not found")
     return db_user
 
 @app.delete("/api/patients/{user_id}")
-def admin_delete_patient(user_id: int, db: Session = Depends(get_db)):
-    db_user = crud.delete_user(db, user_id=user_id)
+def admin_delete_patient(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    db_user = crud.delete_user(db, user_id=user_id, admin_id=current_admin.id)
     if not db_user:
         raise HTTPException(status_code=404, detail="Patient not found")
     return {"message": "Patient records fully deleted"}
 
 @app.get("/api/admin/stats")
-def get_admin_stats(db: Session = Depends(get_db)):
+def get_admin_stats(
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
     return crud.get_community_analytics(db)
 
 @app.get("/api/admin/audit-logs", response_model=List[schemas.AuditLog])
-def get_admin_audit_logs(skip: int = 0, limit: int = 500, db: Session = Depends(get_db)):
+def get_admin_audit_logs(
+    skip: int = 0,
+    limit: int = 500,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
     return crud.get_audit_logs(db, skip=skip, limit=limit)
 
 
@@ -125,12 +164,16 @@ def get_admin_audit_logs(skip: int = 0, limit: int = 500, db: Session = Depends(
 # --- Vital Signs Endpoints ---
 
 @app.post("/api/vitals/")
-def create_vital_sign(vital: schemas.VitalSignCreate, db: Session = Depends(get_db)):
+def create_vital_sign(
+    vital: schemas.VitalSignCreate,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
     # Verify patient exists
     patient = crud.get_user(db, user_id=vital.patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    db_vital = crud.create_vital_sign(db=db, vital=vital)
+    db_vital = crud.create_vital_sign(db=db, vital=vital, admin_id=current_admin.id)
     # Return with patient name attached
     return {
         **{c.name: getattr(db_vital, c.name) for c in db_vital.__table__.columns},
@@ -138,7 +181,12 @@ def create_vital_sign(vital: schemas.VitalSignCreate, db: Session = Depends(get_
     }
 
 @app.get("/api/vitals/")
-def read_vital_signs(skip: int = 0, limit: int = 500, db: Session = Depends(get_db)):
+def read_vital_signs(
+    skip: int = 0,
+    limit: int = 500,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
     """Get all vital sign records with patient names."""
     vitals = crud.get_vital_signs(db, skip=skip, limit=limit)
     results = []
@@ -152,7 +200,11 @@ def read_vital_signs(skip: int = 0, limit: int = 500, db: Session = Depends(get_
     return results
 
 @app.get("/api/vitals/{patient_id}")
-def read_patient_vitals(patient_id: int, db: Session = Depends(get_db)):
+def read_patient_vitals(
+    patient_id: int,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
     """Get vital signs for a specific patient."""
     patient = crud.get_user(db, user_id=patient_id)
     if not patient:
@@ -167,8 +219,12 @@ def read_patient_vitals(patient_id: int, db: Session = Depends(get_db)):
     return results
 
 @app.delete("/api/vitals/{vital_id}")
-def delete_vital_sign(vital_id: int, db: Session = Depends(get_db)):
-    vital = crud.delete_vital_sign(db, vital_id=vital_id)
+def delete_vital_sign(
+    vital_id: int,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    vital = crud.delete_vital_sign(db, vital_id=vital_id, admin_id=current_admin.id)
     if not vital:
         raise HTTPException(status_code=404, detail="Vital sign record not found")
     return {"message": "Vital sign record deleted"}

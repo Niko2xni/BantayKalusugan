@@ -1,25 +1,18 @@
 import { useState } from "react";
 import "./AdminDashboard.css";
-import { useNavigate } from "react-router-dom";
-import logo from "./assets/logo.png";
+import AdminSidebar from "./components/AdminSidebar";
 import {
-    Home,
     Users,
     Activity,
     FileText,
-    Settings,
-    LogOut,
     Bell,
     ChevronDown,
     Download,
-    Calendar,
-    Filter,
     TrendingUp,
     TrendingDown,
     BarChart3,
     FileBarChart,
     Heart,
-    FileCheck,
 } from "lucide-react";
 import {
     BarChart,
@@ -37,14 +30,6 @@ import {
     ResponsiveContainer,
 } from "recharts";
 
-const navItems = [
-    { icon: <Home size={20} />, label: "Dashboard", id: "dashboard", path: "/admin" },
-    { icon: <Users size={20} />, label: "Patients", id: "patients", path: "/admin" },
-    { icon: <Activity size={20} />, label: "Vital Records", id: "records", path: "/admin" },
-    { icon: <FileCheck size={20} />, label: "Audit Logs", id: "audit", path: "/admin/audit-logs" },
-    { icon: <FileText size={20} />, label: "Reports", id: "reports", path: "/admin/reports" },
-    { icon: <Settings size={20} />, label: "Settings", id: "settings", path: "/admin/settings" },
-];
 
 const monthlyReports = [
     { month: "Jan", patients: 45, visits: 120, avgBP: 128 },
@@ -71,48 +56,13 @@ const ageDistribution = [
 ];
 
 export default function AdminReports() {
-    const navigate = useNavigate();
     const [reportType, setReportType] = useState("overview");
     const [dateRange, setDateRange] = useState("thisMonth");
 
-    const handleLogout = () => {
-        navigate("/login");
-    };
-
-    const handleNavClick = (path) => {
-        navigate(path);
-    };
-
     return (
         <div className="admin-layout">
-            {/* Sidebar */}
-            <aside className="admin-sidebar">
-                <div className="sidebar-logo-wrap">
-                    <img src={logo} alt="BantayKalusugan Logo" />
-                </div>
-
-                <nav className="sidebar-nav">
-                    {navItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => handleNavClick(item.path)}
-                            className={`sidebar-nav-btn ${item.id === "reports" ? "active" : ""}`}
-                            title={item.label}
-                        >
-                            {item.icon}
-                            <span className="nav-tooltip">{item.label}</span>
-                        </button>
-                    ))}
-                </nav>
-
-                <button
-                    onClick={handleLogout}
-                    className="sidebar-logout-btn"
-                    title="Logout"
-                >
-                    <LogOut size={20} />
-                </button>
-            </aside>
+            {/* Shared Sidebar */}
+            <AdminSidebar activeNav="reports" />
 
             {/* Main Content */}
             <div className="admin-main">

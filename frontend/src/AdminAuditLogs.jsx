@@ -1,20 +1,13 @@
 import { useState, useEffect } from "react";
 import "./AdminDashboard.css";
-import { useNavigate } from "react-router-dom";
-import logo from "./assets/logo.png";
+import AdminSidebar from "./components/AdminSidebar";
+import { adminFetch } from "./utils/adminApi";
 import {
-  Home,
-  Users,
-  Activity,
-  FileText,
-  Settings,
-  LogOut,
   Search,
   Filter,
   Calendar,
   Clock,
   User,
-  FileCheck,
   Edit,
   Trash2,
   Plus,
@@ -24,18 +17,8 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-const API_BASE = "http://localhost:8000";
-
 // Mock data removed - fetching from API instead
 
-const navItems = [
-  { icon: <Home size={20} />, label: "Dashboard", id: "dashboard", path: "/admin" },
-  { icon: <Users size={20} />, label: "Patients", id: "patients", path: "/admin" },
-  { icon: <Activity size={20} />, label: "Vital Records", id: "records", path: "/admin" },
-  { icon: <FileCheck size={20} />, label: "Audit Logs", id: "audit", path: "/admin/audit-logs" },
-  { icon: <FileText size={20} />, label: "Reports", id: "reports", path: "/admin/reports" },
-  { icon: <Settings size={20} />, label: "Settings", id: "settings", path: "/admin/settings" },
-];
 
 function ActionBadge({ action }) {
   const styles = {
@@ -73,7 +56,6 @@ function RecordTypeBadge({ type }) {
 }
 
 export default function AdminAuditLogs() {
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAction, setFilterAction] = useState("All");
   const [filterRecordType, setFilterRecordType] = useState("All");
@@ -84,7 +66,7 @@ export default function AdminAuditLogs() {
 
   // Fetch audit logs from backend
   useEffect(() => {
-    fetch(`${API_BASE}/api/admin/audit-logs`)
+    adminFetch("/api/admin/audit-logs")
       .then(res => res.json())
       .then(data => {
         const mapped = data.map(log => ({
@@ -109,21 +91,14 @@ export default function AdminAuditLogs() {
       });
   }, []);
 
-  const handleLogout = () => {
-    navigate("/login");
-  };
-
-  const handleNavClick = (path) => {
-    navigate(path);
-  };
-
   // Filter audit logs
   const filteredLogs = auditLogs.filter((log) => {
+    const details = (log.details || "").toLowerCase();
     const matchesSearch =
       searchQuery === "" ||
       log.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.staffName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.details.toLowerCase().includes(searchQuery.toLowerCase());
+      details.includes(searchQuery.toLowerCase());
 
     const matchesAction = filterAction === "All" || log.action === filterAction;
     const matchesRecordType = filterRecordType === "All" || log.recordType === filterRecordType;
@@ -161,36 +136,8 @@ export default function AdminAuditLogs() {
 
   return (
     <div className="admin-layout">
-      {/* Sidebar */}
-      <aside className="admin-sidebar">
-        <div className="sidebar-logo-wrap">
-          <img src={logo} alt="BantayKalusugan Logo" />
-        </div>
-
-        {/* Nav Items */}
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleNavClick(item.path)}
-              className={`sidebar-nav-btn ${item.id === "audit" ? "active" : ""}`}
-              title={item.label}
-            >
-              {item.icon}
-              <span className="nav-tooltip">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="sidebar-logout-btn"
-          title="Logout"
-        >
-          <LogOut size={20} />
-        </button>
-      </aside>
+      {/* Shared Sidebar */}
+      <AdminSidebar activeNav="audit" />
 
       {/* Main Content */}
       <div className="admin-main">
@@ -329,7 +276,13 @@ export default function AdminAuditLogs() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredLogs.length === 0 ? (
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan="7" style={{ padding: "2rem 1rem", textAlign: "center", fontSize: "0.875rem", color: "#888" }}>
+                          Loading audit logs...
+                        </td>
+                      </tr>
+                    ) : filteredLogs.length === 0 ? (
                       <tr>
                         <td colSpan="7" style={{ padding: "2rem 1rem", textAlign: "center", fontSize: "0.875rem", color: "#888" }}>
                           No audit logs found matching your criteria
