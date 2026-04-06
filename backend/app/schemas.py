@@ -19,6 +19,22 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str                     # Plain password (will be hashed before saving)
 
+# Schema for admin creating a new user (admin doesn't set password)
+class AdminUserCreate(UserBase):
+    pass
+
+# Schema for updating a user
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    sex: Optional[str] = None
+    address: Optional[str] = None
+    barangay: Optional[str] = None
+
+
 # Schema for reading/returning a user (never includes the password)
 class User(UserBase):
     id: int
@@ -69,3 +85,21 @@ class VitalSign(VitalSignBase):
     class Config:
         from_attributes = True
 
+# --- Audit Logs Schemas ---
+
+class AuditLogBase(BaseModel):
+    action: str
+    target_id: int
+    target_type: str
+    details: str
+
+class AuditLogCreate(AuditLogBase):
+    admin_id: int
+
+class AuditLog(AuditLogBase):
+    id: int
+    admin_id: int
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True

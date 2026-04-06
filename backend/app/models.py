@@ -11,7 +11,7 @@ class User(Base):
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
-    phone = Column(String, nullable=False)
+    phone = Column(String, unique=True, index=True, nullable=False)
     date_of_birth = Column(Date, nullable=False)
     sex = Column(String, nullable=False)           # "Male" or "Female"
     address = Column(String, nullable=False)
@@ -57,3 +57,14 @@ class VitalSign(Base):
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    action = Column(String, nullable=False)
+    target_id = Column(Integer, nullable=False)
+    target_type = Column(String, nullable=False)
+    details = Column(String, nullable=False)

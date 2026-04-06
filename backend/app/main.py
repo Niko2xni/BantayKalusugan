@@ -41,10 +41,24 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="This email domain is reserved for admin accounts. Please use a different email.")
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
+        if db_user.hashed_password == "PENDING_REGISTRATION":
+            # Claim Account flow
+            db_user.hashed_password = user.password + "_hashed"
+            db.commit()
+            db.refresh(db_user)
+            return db_user
         raise HTTPException(status_code=400, detail="Email already registered")
+        
     db_phone = crud.get_user_by_phone(db, phone=user.phone)
     if db_phone:
+        if db_phone.hashed_password == "PENDING_REGISTRATION":
+            # Claim Account flow
+            db_phone.hashed_password = user.password + "_hashed"
+            db.commit()
+            db.refresh(db_phone)
+            return db_phone
         raise HTTPException(status_code=400, detail="Phone number already registered")
+        
     return crud.create_user(db=db, user=user)
 
 @app.get("/api/users/", response_model=List[schemas.User])
@@ -73,6 +87,39 @@ def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
 def read_patients(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Get only patient-role users (excludes admins)."""
     return crud.get_patients(db, skip=skip, limit=limit)
+
+@app.post("/api/patients/", response_model=schemas.User)
+def admin_create_patient(user: schemas.AdminUserCreate, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    db_phone = crud.get_user_by_phone(db, phone=user.phone)
+    if db_phone:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+    return crud.create_user_admin(db=db, user=user)
+
+@app.put("/api/patients/{user_id}", response_model=schemas.User)
+def admin_update_patient(user_id: int, user_update: schemas.UserUpdate, db: Session = Depends(get_db)):
+    db_user = crud.update_user(db=db, user_id=user_id, user_update=user_update)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return db_user
+
+@app.delete("/api/patients/{user_id}")
+def admin_delete_patient(user_id: int, db: Session = Depends(get_db)):
+    db_user = crud.delete_user(db, user_id=user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return {"message": "Patient records fully deleted"}
+
+@app.get("/api/admin/stats")
+def get_admin_stats(db: Session = Depends(get_db)):
+    return crud.get_community_analytics(db)
+
+@app.get("/api/admin/audit-logs", response_model=List[schemas.AuditLog])
+def get_admin_audit_logs(skip: int = 0, limit: int = 500, db: Session = Depends(get_db)):
+    return crud.get_audit_logs(db, skip=skip, limit=limit)
+
 
 
 # --- Vital Signs Endpoints ---

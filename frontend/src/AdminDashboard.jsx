@@ -38,44 +38,6 @@ import {
   Bar,
   Legend,
 } from "recharts";
-
-// Initial mock data
-const initialPatients = [
-  { id: "P-001", firstName: "Maria", lastName: "Santos", age: 58, gender: "Female", address: "Zone 1, Barangay San Roque", email: "maria.santos@email.com", dateRegistered: "2025-01-15" },
-  { id: "P-002", firstName: "Juan", lastName: "dela Cruz", age: 45, gender: "Male", address: "Zone 2, Barangay San Roque", email: "juan.delacruz@email.com", dateRegistered: "2025-02-20" },
-  { id: "P-003", firstName: "Rosario", lastName: "Reyes", age: 63, gender: "Female", address: "Zone 1, Barangay San Roque", email: "rosario.reyes@email.com", dateRegistered: "2025-03-10" },
-  { id: "P-004", firstName: "Eduardo", lastName: "Lim", age: 50, gender: "Male", address: "Zone 3, Barangay San Roque", email: "eduardo.lim@email.com", dateRegistered: "2025-04-05" },
-  { id: "P-005", firstName: "Lourdes", lastName: "Garcia", age: 70, gender: "Female", address: "Zone 2, Barangay San Roque", email: "lourdes.garcia@email.com", dateRegistered: "2025-05-12" },
-];
-
-const initialVitalSigns = [
-  { id: "V-001", patientId: "P-001", patientName: "Maria Santos", date: "2025-07-22", time: "09:30", systolic: 130, diastolic: 85, heartRate: 78, temperature: 36.6, spO2: 97, respiratoryRate: 18, weight: 65, height: 158, recordedBy: "Admin Staff" },
-  { id: "V-002", patientId: "P-002", patientName: "Juan dela Cruz", date: "2025-07-22", time: "10:15", systolic: 118, diastolic: 76, heartRate: 74, temperature: 36.4, spO2: 98, respiratoryRate: 16, weight: 72, height: 170, recordedBy: "Admin Staff" },
-  { id: "V-003", patientId: "P-003", patientName: "Rosario Reyes", date: "2025-07-21", time: "14:20", systolic: 145, diastolic: 92, heartRate: 88, temperature: 36.7, spO2: 95, respiratoryRate: 20, weight: 58, height: 155, recordedBy: "Admin Staff" },
-  { id: "V-004", patientId: "P-004", patientName: "Eduardo Lim", date: "2025-07-21", time: "11:00", systolic: 122, diastolic: 78, heartRate: 73, temperature: 36.5, spO2: 98, respiratoryRate: 17, weight: 78, height: 175, recordedBy: "Admin Staff" },
-  { id: "V-005", patientId: "P-005", patientName: "Lourdes Garcia", date: "2025-07-20", time: "15:45", systolic: 138, diastolic: 88, heartRate: 80, temperature: 36.6, spO2: 96, respiratoryRate: 19, weight: 60, height: 160, recordedBy: "Admin Staff" },
-];
-
-const bpTrendData = [
-  { month: "Jan", systolic: 125, diastolic: 82 },
-  { month: "Feb", systolic: 130, diastolic: 85 },
-  { month: "Mar", systolic: 128, diastolic: 83 },
-  { month: "Apr", systolic: 122, diastolic: 80 },
-  { month: "May", systolic: 135, diastolic: 88 },
-  { month: "Jun", systolic: 129, diastolic: 84 },
-  { month: "Jul", systolic: 124, diastolic: 81 },
-];
-
-const registrationsData = [
-  { month: "Jan", patients: 12 },
-  { month: "Feb", patients: 18 },
-  { month: "Mar", patients: 15 },
-  { month: "Apr", patients: 22 },
-  { month: "May", patients: 19 },
-  { month: "Jun", patients: 25 },
-  { month: "Jul", patients: 30 },
-];
-
 const navItems = [
   { icon: <Home size={20} />, label: "Dashboard", id: "dashboard", path: "/admin" },
   { icon: <Users size={20} />, label: "Patients", id: "patients", path: "/admin" },
@@ -133,22 +95,38 @@ export default function AdminDashboard() {
   const [showViewVitalModal, setShowViewVitalModal] = useState(false);
   const [selectedVital, setSelectedVital] = useState(null);
 
+  // Stats State
+  const [bpTrendData, setBpTrendData] = useState([]);
+  const [registrationsData, setRegistrationsData] = useState([]);
+
   // Fetch from backend
   useEffect(() => {
     fetch(`${API_BASE}/api/patients/`)
       .then(res => res.json())
       .then(data => {
-        const mapped = data.map(p => ({
-          id: `P-${String(p.id).padStart(3, '0')}`,
-          dbId: p.id,
-          firstName: p.first_name,
-          lastName: p.last_name,
-          age: p.age,
-          gender: p.gender,
-          address: p.address,
-          email: p.email,
-          dateRegistered: new Date(p.created_at).toISOString().split('T')[0],
-        }));
+        const mapped = data.map(p => {
+          let ageObj = 0;
+          if (p.date_of_birth) {
+            const today = new Date();
+            const birthDate = new Date(p.date_of_birth);
+            ageObj = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) ageObj--;
+          }
+          return {
+            id: `P-${String(p.id).padStart(3, '0')}`,
+            dbId: p.id,
+            firstName: p.first_name,
+            lastName: p.last_name,
+            age: ageObj,
+            gender: p.sex,
+            address: p.address,
+            email: p.email,
+            phone: p.phone,
+            date_of_birth: p.date_of_birth,
+            dateRegistered: p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : "N/A",
+          };
+        });
         setPatients(mapped);
       })
       .catch(err => console.error("Failed to fetch patients:", err));
@@ -176,6 +154,14 @@ export default function AdminDashboard() {
         setVitalSigns(mapped);
       })
       .catch(err => console.error("Failed to fetch vitals:", err));
+
+    fetch(`${API_BASE}/api/admin/stats`)
+      .then(res => res.json())
+      .then(data => {
+        setBpTrendData(data.bp_trends);
+        setRegistrationsData(data.registrations);
+      })
+      .catch(err => console.error("Failed to fetch custom stats:", err));
   }, []);
 
   // Update vital signs names when patients load
@@ -193,10 +179,11 @@ export default function AdminDashboard() {
   const [newPatient, setNewPatient] = useState({
     firstName: "",
     lastName: "",
-    age: "",
+    email: "",
+    phone: "",
+    date_of_birth: "",
     gender: "Male",
     address: "",
-    email: "",
   });
 
   // Form states for adding vital signs
@@ -223,50 +210,129 @@ export default function AdminDashboard() {
   };
 
   // Add patient
-  const handleAddPatient = () => {
-    if (!newPatient.firstName || !newPatient.lastName || !newPatient.age) {
-      alert("Please fill in all required fields");
+  const handleAddPatient = async () => {
+    if (!newPatient.firstName || !newPatient.lastName || !newPatient.phone || !newPatient.date_of_birth) {
+      alert("Please fill in first name, last name, phone, and date of birth");
       return;
     }
 
-    const patientId = `P-${String(patients.length + 1).padStart(3, '0')}`;
-    const patient = {
-      id: patientId,
-      firstName: newPatient.firstName,
-      lastName: newPatient.lastName,
-      age: parseInt(newPatient.age),
-      gender: newPatient.gender,
-      address: newPatient.address,
-      email: newPatient.email,
-      dateRegistered: new Date().toISOString().split('T')[0],
-    };
+    try {
+      const response = await fetch(`${API_BASE}/api/patients/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: newPatient.firstName,
+          last_name: newPatient.lastName,
+          email: newPatient.email,
+          phone: newPatient.phone,
+          date_of_birth: newPatient.date_of_birth,
+          sex: newPatient.gender,
+          address: newPatient.address,
+          barangay: "Unknown",
+        }),
+      });
 
-    setPatients([...patients, patient]);
-    setShowAddPatientModal(false);
-    setNewPatient({
-      firstName: "",
-      lastName: "",
-      age: "",
-      gender: "Male",
-      address: "",
-      email: "",
-    });
+      if (response.ok) {
+        const p = await response.json();
+        
+        let ageObj = 0;
+        if (p.date_of_birth) {
+          const today = new Date();
+          const birthDate = new Date(p.date_of_birth);
+          ageObj = today.getFullYear() - birthDate.getFullYear();
+          const m = today.getMonth() - birthDate.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) ageObj--;
+        }
+
+        const patient = {
+          id: `P-${String(p.id).padStart(3, '0')}`,
+          dbId: p.id,
+          firstName: p.first_name,
+          lastName: p.last_name,
+          age: ageObj,
+          gender: p.sex,
+          address: p.address,
+          email: p.email,
+          phone: p.phone,
+          date_of_birth: p.date_of_birth,
+          dateRegistered: new Date(p.created_at || new Date()).toISOString().split('T')[0],
+        };
+
+        setPatients([...patients, patient]);
+        setShowAddPatientModal(false);
+        setNewPatient({
+          firstName: "",
+          lastName: "",
+          email: "",
+          phone: "",
+          date_of_birth: "",
+          gender: "Male",
+          address: "",
+        });
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to add patient: ${errorData.detail}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error connecting to server");
+    }
   };
 
   // Edit patient
-  const handleEditPatient = () => {
+  const handleEditPatient = async () => {
     if (!editingPatient) return;
 
-    setPatients(patients.map(p => p.id === editingPatient.id ? editingPatient : p));
-    setShowEditPatientModal(false);
-    setEditingPatient(null);
+    try {
+      const response = await fetch(`${API_BASE}/api/patients/${editingPatient.dbId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: editingPatient.firstName,
+          last_name: editingPatient.lastName,
+          email: editingPatient.email,
+          phone: editingPatient.phone,
+          sex: editingPatient.gender,
+          address: editingPatient.address,
+        }),
+      });
+
+      if (response.ok) {
+        setPatients(patients.map(p => p.id === editingPatient.id ? editingPatient : p));
+        setShowEditPatientModal(false);
+        setEditingPatient(null);
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to edit patient details: ${errorData.detail || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error connecting to server");
+    }
   };
 
   // Delete patient
-  const handleDeletePatient = (patientId) => {
+  const handleDeletePatient = async (patientId) => {
     if (confirm("Are you sure you want to delete this patient? All their vital sign records will also be deleted.")) {
-      setPatients(patients.filter(p => p.id !== patientId));
-      setVitalSigns(vitalSigns.filter(v => v.patientId !== patientId));
+      const p = patients.find(pat => pat.id === patientId);
+      if (p && p.dbId) {
+        try {
+          const res = await fetch(`${API_BASE}/api/patients/${p.dbId}`, { method: "DELETE" });
+          if (res.ok) {
+            setPatients(patients.filter(pat => pat.id !== patientId));
+            setVitalSigns(vitalSigns.filter(v => v.patientId !== patientId));
+          } else {
+            const errorData = await res.json();
+            alert(`Failed to delete patient: ${errorData.detail || "Unknown error"}`);
+          }
+        } catch (err) {
+            console.error(err);
+            alert("Error connecting to server");
+        }
+      } else {
+        setPatients(patients.filter(pat => pat.id !== patientId));
+        setVitalSigns(vitalSigns.filter(v => v.patientId !== patientId));
+      }
     }
   };
 
@@ -286,6 +352,8 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           patient_id: patient.dbId,
+          date: newVital.date,
+          time: newVital.time,
           systolic: parseInt(newVital.systolic),
           diastolic: parseInt(newVital.diastolic),
           heart_rate: parseInt(newVital.heartRate),
@@ -332,7 +400,8 @@ export default function AdminDashboard() {
           height: "",
         });
       } else {
-        alert("Failed to save vital sign to database.");
+        const errorData = await response.json();
+        alert(`Failed to save vital sign: ${errorData.detail || "Unknown error"}`);
       }
     } catch (err) {
       console.error(err);
@@ -350,7 +419,8 @@ export default function AdminDashboard() {
           if (res.ok) {
             setVitalSigns(vitalSigns.filter(vital => vital.id !== vitalId));
           } else {
-            alert("Failed to delete record.");
+            const errorData = await res.json();
+            alert(`Failed to delete record: ${errorData.detail || "Unknown error"}`);
           }
         } catch (err) {
           console.error(err);
@@ -861,12 +931,11 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="modal-label">Age *</label>
+                <label className="modal-label">Date of Birth *</label>
                 <input
-                  type="number"
-                  placeholder="Age"
-                  value={newPatient.age}
-                  onChange={(e) => setNewPatient({ ...newPatient, age: e.target.value })}
+                  type="date"
+                  value={newPatient.date_of_birth}
+                  onChange={(e) => setNewPatient({ ...newPatient, date_of_birth: e.target.value })}
                   className="modal-input"
                 />
               </div>
@@ -880,6 +949,17 @@ export default function AdminDashboard() {
                   <option>Male</option>
                   <option>Female</option>
                 </select>
+              </div>
+
+              <div className="modal-form-full">
+                <label className="modal-label">Phone *</label>
+                <input
+                  type="text"
+                  placeholder="Phone number"
+                  value={newPatient.phone}
+                  onChange={(e) => setNewPatient({ ...newPatient, phone: e.target.value })}
+                  className="modal-input"
+                />
               </div>
 
               <div className="modal-form-full">
@@ -946,12 +1026,13 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="modal-label">Age *</label>
+                <label className="modal-label">Age (Calculated)</label>
                 <input
                   type="number"
                   value={editingPatient.age}
-                  onChange={(e) => setEditingPatient({ ...editingPatient, age: parseInt(e.target.value) })}
+                  disabled
                   className="modal-input"
+                  style={{ backgroundColor: "#f5f5f5", opacity: 0.7 }}
                 />
               </div>
               <div>
@@ -964,6 +1045,16 @@ export default function AdminDashboard() {
                   <option>Male</option>
                   <option>Female</option>
                 </select>
+              </div>
+
+              <div className="modal-form-full">
+                <label className="modal-label">Phone</label>
+                <input
+                  type="text"
+                  value={editingPatient.phone}
+                  onChange={(e) => setEditingPatient({ ...editingPatient, phone: e.target.value })}
+                  className="modal-input"
+                />
               </div>
 
               <div className="modal-form-full">

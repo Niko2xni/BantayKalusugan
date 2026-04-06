@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./AdminDashboard.css";
 import { useNavigate } from "react-router-dom";
 import logo from "./assets/logo.png";
@@ -24,105 +24,9 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-// Mock audit logs data
-const initialAuditLogs = [
-  {
-    id: "AL-001",
-    timestamp: "2026-03-19 14:23:15",
-    staffName: "Admin Staff",
-    staffId: "AS-001",
-    action: "Added",
-    patientId: "P-001",
-    patientName: "Maria Santos",
-    recordType: "Vital Signs",
-    details: "Blood Pressure: 130/85, Heart Rate: 78, Temp: 36.6°C, SpO₂: 97%, Weight: 65kg, Height: 158cm",
-    ipAddress: "192.168.1.105",
-  },
-  {
-    id: "AL-002",
-    timestamp: "2026-03-19 13:45:22",
-    staffName: "Admin Staff",
-    staffId: "AS-001",
-    action: "Updated",
-    patientId: "P-002",
-    patientName: "Juan dela Cruz",
-    recordType: "Patient Record",
-    details: "Patient assigned to Barangay Zone 2 Health Clinic",
-    ipAddress: "192.168.1.105",
-  },
-  {
-    id: "AL-003",
-    timestamp: "2026-03-19 11:30:08",
-    staffName: "Admin Staff",
-    staffId: "AS-001",
-    action: "Added",
-    patientId: "P-003",
-    patientName: "Rosario Reyes",
-    recordType: "Vital Signs",
-    details: "Blood Pressure: 145/92, Heart Rate: 88, Temp: 36.7°C, SpO₂: 95%, Weight: 58kg, Height: 155cm",
-    ipAddress: "192.168.1.105",
-  },
-  {
-    id: "AL-004",
-    timestamp: "2026-03-18 16:12:45",
-    staffName: "Admin Staff",
-    staffId: "AS-001",
-    action: "Transferred",
-    patientId: "P-004",
-    patientName: "Eduardo Lim",
-    recordType: "Patient Record",
-    details: "Patient transferred to Zone 3 health center",
-    ipAddress: "192.168.1.105",
-  },
-  {
-    id: "AL-005",
-    timestamp: "2026-03-18 14:55:30",
-    staffName: "Admin Staff",
-    staffId: "AS-001",
-    action: "Added",
-    patientId: "P-005",
-    patientName: "Lourdes Garcia",
-    recordType: "Vital Signs",
-    details: "Blood Pressure: 138/88, Heart Rate: 80, Temp: 36.6°C, SpO₂: 96%, Weight: 60kg, Height: 160cm",
-    ipAddress: "192.168.1.105",
-  },
-  {
-    id: "AL-006",
-    timestamp: "2026-03-18 10:20:17",
-    staffName: "Admin Staff",
-    staffId: "AS-001",
-    action: "Added",
-    patientId: "P-002",
-    patientName: "Juan dela Cruz",
-    recordType: "Vital Signs",
-    details: "Blood Pressure: 118/76, Heart Rate: 74, Temp: 36.4°C, SpO₂: 98%, Weight: 72kg, Height: 170cm",
-    ipAddress: "192.168.1.105",
-  },
-  {
-    id: "AL-007",
-    timestamp: "2026-03-17 15:40:55",
-    staffName: "Admin Staff",
-    staffId: "AS-001",
-    action: "Deleted",
-    patientId: "P-006",
-    patientName: "Carlos Hernandez",
-    recordType: "Patient Record",
-    details: "Patient record deleted (duplicate entry)",
-    ipAddress: "192.168.1.105",
-  },
-  {
-    id: "AL-008",
-    timestamp: "2026-03-17 09:15:42",
-    staffName: "Admin Staff",
-    staffId: "AS-001",
-    action: "Added",
-    patientId: "P-001",
-    patientName: "Maria Santos",
-    recordType: "Appointment",
-    details: "Scheduled follow-up appointment for 2026-03-25",
-    ipAddress: "192.168.1.105",
-  },
-];
+const API_BASE = "http://localhost:8000";
+
+// Mock data removed - fetching from API instead
 
 const navItems = [
   { icon: <Home size={20} />, label: "Dashboard", id: "dashboard", path: "/admin" },
@@ -175,6 +79,35 @@ export default function AdminAuditLogs() {
   const [filterRecordType, setFilterRecordType] = useState("All");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch audit logs from backend
+  useEffect(() => {
+    fetch(`${API_BASE}/api/admin/audit-logs`)
+      .then(res => res.json())
+      .then(data => {
+        const mapped = data.map(log => ({
+          id: `AL-${String(log.id).padStart(3, '0')}`,
+          dbId: log.id,
+          timestamp: new Date(log.timestamp).toLocaleString(),
+          staffName: "Admin Staff", // Static for now as API doesn't return name
+          staffId: `AS-${String(log.admin_id).padStart(3, '0')}`,
+          action: log.action,
+          patientId: log.target_type === "Patient Record" ? `P-${String(log.target_id).padStart(3, '0')}` : "N/A",
+          patientName: "Multiple/System", // Parsing from details would be complex
+          recordType: log.target_type,
+          details: log.details,
+          ipAddress: "N/A"
+        }));
+        setAuditLogs(mapped);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch audit logs:", err);
+        setIsLoading(false);
+      });
+  }, []);
 
   const handleLogout = () => {
     navigate("/login");
@@ -185,7 +118,7 @@ export default function AdminAuditLogs() {
   };
 
   // Filter audit logs
-  const filteredLogs = initialAuditLogs.filter((log) => {
+  const filteredLogs = auditLogs.filter((log) => {
     const matchesSearch =
       searchQuery === "" ||
       log.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
