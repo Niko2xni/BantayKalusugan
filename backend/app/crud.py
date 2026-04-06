@@ -2,7 +2,7 @@ import csv
 import io
 import json
 from collections import defaultdict
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
@@ -26,6 +26,14 @@ def _classify_bp(systolic: int, diastolic: int) -> str:
         return "Hypertensive"
     if systolic >= 120 or diastolic >= 80:
         return "Under Monitoring"
+    return "Normal"
+
+
+def _classify_patient_bp_status(systolic: int, diastolic: int) -> str:
+    if systolic >= 140 or diastolic >= 90:
+        return "Abnormal"
+    if systolic >= 120 or diastolic >= 80:
+        return "Elevated"
     return "Normal"
 
 
@@ -135,6 +143,30 @@ def _validate_password_strength(password: str) -> str | None:
         return "Password must include at least one special character"
     return None
 
+
+def _create_notification(
+    db: Session,
+    user_id: int,
+    title: str,
+    body: str,
+    kind: str = "general",
+):
+    notification = models.Notification(
+        user_id=user_id,
+        title=title,
+        body=body,
+        kind=kind,
+        is_read=False,
+    )
+    db.add(notification)
+    db.flush()
+    return notification
+
+
+def _format_appointment_title(appointment: models.Appointment) -> str:
+    scheduled = appointment.scheduled_at.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
+    return f"{appointment.appointment_type} on {scheduled}"
+
 # Get a single user by ID
 def get_user(db: Session, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
@@ -209,6 +241,322 @@ def get_patients(db: Session, skip: int = 0, limit: int = 100):
         .limit(limit)
         .all()
     )
+
+
+def update_current_user_profile(
+    db: Session,
+    current_user: models.User,
+    profile_update: schemas.CurrentUserUpdate,
+):
+    update_data = profile_update.model_dump(exclude_unset=True)
+    if not update_data:
+        return current_user
+
+    if "email" in update_data:
+        email = update_data["email"].strip().lower()
+        if current_user.role != "admin" and email.endswith("@bantaykalusugan.com"):
+            raise ValueError("This email domain is reserved for admin accounts")
+
+        existing_email = (
+            db.query(models.User)
+            .filter(models.User.email == email, models.User.id != current_user.id)
+            .first()
+        )
+        if existing_email:
+            raise ValueError("Email already registered")
+        update_data["email"] = email
+
+    if "phone" in update_data:
+        phone = update_data["phone"].strip()
+        if not phone:
+            raise ValueError("Phone number cannot be empty")
+
+        existing_phone = (
+            db.query(models.User)
+            .filter(models.User.phone == phone, models.User.id != current_user.id)
+            .first()
+        )
+        if existing_phone:
+            raise ValueError("Phone number already registered")
+        update_data["phone"] = phone
+
+    if "address" in update_data:
+        address = update_data["address"].strip()
+        if not address:
+            raise ValueError("Address cannot be empty")
+        update_data["address"] = address
+
+    for key, value in update_data.items():
+        setattr(current_user, key, value)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+def get_patient_appointments(
+    db: Session,
+    patient_id: int,
+    status: str | None = None,
+):
+    query = db.query(models.Appointment).filter(models.Appointment.patient_id == patient_id)
+    if status:
+        query = query.filter(models.Appointment.status == status)
+
+    return query.order_by(models.Appointment.scheduled_at.asc(), models.Appointment.id.asc()).all()
+
+
+def request_patient_appointment(
+    db: Session,
+    patient: models.User,
+    payload: schemas.AppointmentRequestCreate,
+):
+    appointment = models.Appointment(
+        patient_id=patient.id,
+        appointment_type=payload.appointment_type.strip(),
+        health_area=payload.health_area.strip(),
+        scheduled_at=payload.scheduled_at,
+        status="Pending",
+        location=payload.location.strip() if payload.location else "Barangay Health Center",
+        assigned_staff="Pending Assignment",
+        notes="",
+        requested_notes=payload.notes.strip() if payload.notes else "",
+    )
+    db.add(appointment)
+    db.flush()
+
+    _create_notification(
+        db,
+        user_id=patient.id,
+        title="Appointment requested",
+        body=f"Your request for {_format_appointment_title(appointment)} was submitted.",
+        kind="appointment",
+    )
+
+    db.commit()
+    db.refresh(appointment)
+    return appointment
+
+
+def cancel_patient_appointment(
+    db: Session,
+    patient: models.User,
+    appointment_id: int,
+):
+    appointment = (
+        db.query(models.Appointment)
+        .filter(models.Appointment.id == appointment_id, models.Appointment.patient_id == patient.id)
+        .first()
+    )
+    if appointment is None:
+        raise ValueError("Appointment not found")
+
+    if appointment.status in {"Completed", "Cancelled"}:
+        raise ValueError(f"Appointment is already {appointment.status.lower()}")
+
+    appointment.status = "Cancelled"
+    appointment.updated_at = datetime.now(UTC)
+
+    _create_notification(
+        db,
+        user_id=patient.id,
+        title="Appointment cancelled",
+        body=f"Your {_format_appointment_title(appointment)} has been cancelled.",
+        kind="appointment",
+    )
+
+    db.commit()
+    db.refresh(appointment)
+    return appointment
+
+
+def reschedule_patient_appointment(
+    db: Session,
+    patient: models.User,
+    appointment_id: int,
+    payload: schemas.AppointmentRescheduleRequest,
+):
+    appointment = (
+        db.query(models.Appointment)
+        .filter(models.Appointment.id == appointment_id, models.Appointment.patient_id == patient.id)
+        .first()
+    )
+    if appointment is None:
+        raise ValueError("Appointment not found")
+
+    if appointment.status in {"Completed", "Cancelled"}:
+        raise ValueError(f"Appointment cannot be rescheduled because it is {appointment.status.lower()}")
+
+    appointment.scheduled_at = payload.scheduled_at
+    appointment.status = "Pending"
+    appointment.requested_notes = payload.notes.strip() if payload.notes else appointment.requested_notes
+    appointment.updated_at = datetime.now(UTC)
+
+    _create_notification(
+        db,
+        user_id=patient.id,
+        title="Appointment reschedule requested",
+        body=f"Your appointment was moved to {_format_appointment_title(appointment)} and is pending confirmation.",
+        kind="appointment",
+    )
+
+    db.commit()
+    db.refresh(appointment)
+    return appointment
+
+
+def get_patient_notifications(
+    db: Session,
+    user_id: int,
+    only_unread: bool = False,
+):
+    query = db.query(models.Notification).filter(models.Notification.user_id == user_id)
+    if only_unread:
+        query = query.filter(models.Notification.is_read.is_(False))
+
+    return query.order_by(models.Notification.created_at.desc(), models.Notification.id.desc()).all()
+
+
+def mark_notification_as_read(
+    db: Session,
+    user_id: int,
+    notification_id: int,
+):
+    notification = (
+        db.query(models.Notification)
+        .filter(models.Notification.id == notification_id, models.Notification.user_id == user_id)
+        .first()
+    )
+    if notification is None:
+        raise ValueError("Notification not found")
+
+    if not notification.is_read:
+        notification.is_read = True
+        notification.read_at = datetime.now(UTC)
+        db.commit()
+        db.refresh(notification)
+
+    return notification
+
+
+def mark_all_notifications_as_read(
+    db: Session,
+    user_id: int,
+) -> int:
+    notifications = (
+        db.query(models.Notification)
+        .filter(models.Notification.user_id == user_id, models.Notification.is_read.is_(False))
+        .all()
+    )
+
+    now = datetime.now(UTC)
+    for notification in notifications:
+        notification.is_read = True
+        notification.read_at = now
+
+    if notifications:
+        db.commit()
+
+    return len(notifications)
+
+
+def get_chat_messages(
+    db: Session,
+    user_id: int,
+    channel: str = "support",
+):
+    return (
+        db.query(models.ChatMessage)
+        .filter(models.ChatMessage.user_id == user_id, models.ChatMessage.channel == channel)
+        .order_by(models.ChatMessage.created_at.asc(), models.ChatMessage.id.asc())
+        .all()
+    )
+
+
+def _build_bot_reply(message: str) -> str:
+    lower_msg = message.lower()
+    if "appointment" in lower_msg or "schedule" in lower_msg:
+        return "For appointments, use the Schedules page to request, cancel, or reschedule, and check status updates there."
+    if "vital" in lower_msg or "bp" in lower_msg or "blood pressure" in lower_msg:
+        return "You can review your latest trends and complete vital history in Dashboard and Analytics."
+    if "help" in lower_msg or "support" in lower_msg:
+        return "I can answer common workflow questions. If this is urgent, please contact your barangay health center directly."
+    if "hello" in lower_msg or "hi" in lower_msg:
+        return "Hello. How can I assist you with your health portal today?"
+    return "Thanks for your message. I have noted this and can help with appointments, vitals, and account usage questions."
+
+
+def create_chat_message_with_reply(
+    db: Session,
+    user_id: int,
+    payload: schemas.ChatMessageCreate,
+):
+    message_text = payload.message.strip()
+    if not message_text:
+        raise ValueError("Message cannot be empty")
+
+    user_message = models.ChatMessage(
+        user_id=user_id,
+        sender_type="patient",
+        message=message_text,
+        channel=payload.channel,
+    )
+    db.add(user_message)
+    db.flush()
+
+    bot_message = models.ChatMessage(
+        user_id=user_id,
+        sender_type="bot",
+        message=_build_bot_reply(message_text),
+        channel=payload.channel,
+    )
+    db.add(bot_message)
+
+    _create_notification(
+        db,
+        user_id=user_id,
+        title="Support response available",
+        body="A new support reply has been added to your chat.",
+        kind="chat",
+    )
+
+    db.commit()
+    db.refresh(user_message)
+    db.refresh(bot_message)
+    return [user_message, bot_message]
+
+
+def get_help_articles():
+    return [
+        {
+            "id": "getting-started",
+            "title": "Getting Started",
+            "subtitle": "New users logging in for the first time.",
+            "content": "Use Dashboard for your latest summary, Analytics for trends, and Schedules for appointment actions.",
+            "category": "onboarding",
+        },
+        {
+            "id": "vitals",
+            "title": "Vitals and Analytics",
+            "subtitle": "Understanding your health records.",
+            "content": "Analytics supports date filters and export so you can track BP, heart rate, temperature, SpO2, and BMI over time.",
+            "category": "records",
+        },
+        {
+            "id": "appointments",
+            "title": "Appointments",
+            "subtitle": "Requesting and managing schedules.",
+            "content": "Go to Schedules to request a visit, then monitor pending, confirmed, completed, or cancelled statuses.",
+            "category": "appointments",
+        },
+        {
+            "id": "account",
+            "title": "Account and Security",
+            "subtitle": "Managing profile and sign-in safety.",
+            "content": "Use Profile to update contact details and password. Your token session is required for all protected pages.",
+            "category": "account",
+        },
+    ]
 
 # --- Audit Logs ---
 
@@ -443,7 +791,157 @@ def get_vital_signs(db: Session, skip: int = 0, limit: int = 500):
     return db.query(models.VitalSign).offset(skip).limit(limit).all()
 
 def get_vital_signs_by_patient(db: Session, patient_id: int):
-    return db.query(models.VitalSign).filter(models.VitalSign.patient_id == patient_id).all()
+    return (
+        db.query(models.VitalSign)
+        .filter(models.VitalSign.patient_id == patient_id)
+        .order_by(models.VitalSign.date.desc(), models.VitalSign.time.desc(), models.VitalSign.id.desc())
+        .all()
+    )
+
+
+def _apply_vital_date_filters(query, date_start: date | None = None, date_end: date | None = None):
+    if date_start is not None:
+        query = query.filter(models.VitalSign.date >= date_start.isoformat())
+    if date_end is not None:
+        query = query.filter(models.VitalSign.date <= date_end.isoformat())
+    return query
+
+
+def get_vital_signs_by_patient_filtered(
+    db: Session,
+    patient_id: int,
+    skip: int = 0,
+    limit: int = 500,
+    date_start: date | None = None,
+    date_end: date | None = None,
+):
+    query = db.query(models.VitalSign).filter(models.VitalSign.patient_id == patient_id)
+    query = _apply_vital_date_filters(query, date_start=date_start, date_end=date_end)
+
+    return (
+        query.order_by(models.VitalSign.date.desc(), models.VitalSign.time.desc(), models.VitalSign.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+def get_latest_vital_sign_by_patient(
+    db: Session,
+    patient_id: int,
+    date_start: date | None = None,
+    date_end: date | None = None,
+):
+    query = db.query(models.VitalSign).filter(models.VitalSign.patient_id == patient_id)
+    query = _apply_vital_date_filters(query, date_start=date_start, date_end=date_end)
+
+    return query.order_by(
+        models.VitalSign.date.desc(),
+        models.VitalSign.time.desc(),
+        models.VitalSign.id.desc(),
+    ).first()
+
+
+def get_patient_analytics_overview(
+    db: Session,
+    patient_id: int,
+    date_start: date | None = None,
+    date_end: date | None = None,
+):
+    base_query = db.query(models.VitalSign).filter(models.VitalSign.patient_id == patient_id)
+    base_query = _apply_vital_date_filters(base_query, date_start=date_start, date_end=date_end)
+
+    stats = base_query.with_entities(
+        func.count(models.VitalSign.id).label("total_records"),
+        func.avg(models.VitalSign.systolic).label("avg_systolic"),
+        func.avg(models.VitalSign.diastolic).label("avg_diastolic"),
+        func.avg(models.VitalSign.heart_rate).label("avg_heart_rate"),
+        func.avg(models.VitalSign.temperature).label("avg_temperature"),
+        func.avg(models.VitalSign.spo2).label("avg_spo2"),
+        func.avg(models.VitalSign.respiratory_rate).label("avg_respiratory_rate"),
+        func.avg(models.VitalSign.weight).label("avg_weight"),
+        func.avg(models.VitalSign.height).label("avg_height"),
+    ).first()
+
+    bp_status_counts = {
+        "Normal": 0,
+        "Elevated": 0,
+        "Abnormal": 0,
+    }
+    bp_rows = base_query.with_entities(models.VitalSign.systolic, models.VitalSign.diastolic).all()
+    for row in bp_rows:
+        bp_status = _classify_patient_bp_status(row.systolic, row.diastolic)
+        bp_status_counts[bp_status] += 1
+
+    return {
+        "total_records": int(stats.total_records or 0),
+        "avg_systolic": _safe_round(stats.avg_systolic),
+        "avg_diastolic": _safe_round(stats.avg_diastolic),
+        "avg_heart_rate": _safe_round(stats.avg_heart_rate),
+        "avg_temperature": _safe_round(stats.avg_temperature),
+        "avg_spo2": _safe_round(stats.avg_spo2),
+        "avg_respiratory_rate": _safe_round(stats.avg_respiratory_rate),
+        "avg_weight": _safe_round(stats.avg_weight),
+        "avg_height": _safe_round(stats.avg_height),
+        "normal_bp_records": bp_status_counts["Normal"],
+        "elevated_bp_records": bp_status_counts["Elevated"],
+        "abnormal_bp_records": bp_status_counts["Abnormal"],
+    }
+
+
+def export_patient_vitals_csv(
+    db: Session,
+    patient: models.User,
+    date_start: date | None = None,
+    date_end: date | None = None,
+):
+    vitals = get_vital_signs_by_patient_filtered(
+        db,
+        patient_id=patient.id,
+        skip=0,
+        limit=5000,
+        date_start=date_start,
+        date_end=date_end,
+    )
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(["Patient Name", f"{patient.first_name} {patient.last_name}".strip()])
+    writer.writerow(["Patient Email", patient.email])
+    writer.writerow(["Date Start", date_start.isoformat() if date_start else "All"])
+    writer.writerow(["Date End", date_end.isoformat() if date_end else "All"])
+    writer.writerow([])
+    writer.writerow([
+        "Date",
+        "Time",
+        "Systolic",
+        "Diastolic",
+        "Heart Rate",
+        "Temperature",
+        "SpO2",
+        "Respiratory Rate",
+        "Weight",
+        "Height",
+        "Recorded By",
+    ])
+
+    for vital in vitals:
+        writer.writerow([
+            vital.date,
+            vital.time,
+            vital.systolic,
+            vital.diastolic,
+            vital.heart_rate,
+            vital.temperature,
+            vital.spo2,
+            vital.respiratory_rate,
+            vital.weight,
+            vital.height,
+            vital.recorded_by,
+        ])
+
+    return output.getvalue()
 
 def delete_vital_sign(db: Session, vital_id: int, admin_id: int):
     vital = db.query(models.VitalSign).filter(models.VitalSign.id == vital_id).first()
@@ -825,12 +1323,12 @@ def update_system_settings(
     return payload
 
 
-def change_admin_password(
+def _change_user_password(
     db: Session,
-    current_admin: models.User,
+    current_user: models.User,
     password_data: schemas.PasswordChangeRequest,
 ):
-    if not verify_password(password_data.current_password, current_admin.hashed_password):
+    if not verify_password(password_data.current_password, current_user.hashed_password):
         raise PermissionError("Current password is incorrect")
 
     if password_data.new_password != password_data.confirm_password:
@@ -843,8 +1341,24 @@ def change_admin_password(
     if strength_error:
         raise ValueError(strength_error)
 
-    current_admin.hashed_password = get_password_hash(password_data.new_password)
+    current_user.hashed_password = get_password_hash(password_data.new_password)
     db.commit()
+
+
+def change_user_password(
+    db: Session,
+    current_user: models.User,
+    password_data: schemas.PasswordChangeRequest,
+):
+    _change_user_password(db, current_user, password_data)
+
+
+def change_admin_password(
+    db: Session,
+    current_admin: models.User,
+    password_data: schemas.PasswordChangeRequest,
+):
+    _change_user_password(db, current_admin, password_data)
 
     create_audit_log(
         db=db,

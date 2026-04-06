@@ -2,6 +2,7 @@ import styles from './login.module.css';
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, MapPin, Phone, Facebook, Twitter, Instagram, Menu, X } from "lucide-react";
+import { clearAuthSession } from "./utils/authSession";
 
 import logo from "./assets/logo.svg";
 
@@ -121,7 +122,7 @@ export default function Login() {
       const data = await response.json();
 
       if (!response.ok) {
-        localStorage.removeItem("token");
+        clearAuthSession();
         setError(data.detail || "Login failed. Please try again.");
         setLoading(false);
         return;
@@ -139,7 +140,7 @@ export default function Login() {
           navigate("/dashboard");
         }
       } else {
-        localStorage.removeItem("token");
+        clearAuthSession();
         setError("Login failed. Please try again.");
         setLoading(false);
       }

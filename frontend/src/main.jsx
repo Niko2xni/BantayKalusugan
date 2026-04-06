@@ -15,16 +15,12 @@ import SchedulesPage from './SchedulesPage.jsx'
 import ChatPage from './ChatPage.jsx'
 import HelpPage from './HelpPage.jsx'
 import ProfilePage from './ProfilePage.jsx'
-import VitalsPage from './VitalsPage.jsx'
 
 // Admin pages
 import AdminDashboard from './AdminDashboard.jsx'
 import AdminReports from './AdminReports.jsx'
 import AdminSettings from './AdminSettings.jsx'
 import AdminAuditLogs from './AdminAuditLogs.jsx'
-
-// Import the new component for testing backend connection
-import UserList from './components/UserList.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -46,7 +42,7 @@ createRoot(document.getElementById('root')).render(
           <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-          <Route path="/vitals" element={<ProtectedRoute><VitalsPage /></ProtectedRoute>} />
+          <Route path="/vitals" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
 
           {/* Protected: admin only */}
           <Route path="/admin" element={
@@ -70,8 +66,6 @@ createRoot(document.getElementById('root')).render(
             </ProtectedRoute>
           } />
 
-          {/* Test Route for backend connection */}
-          <Route path="/users" element={<UserList />} />
         </Routes>
       </ErrorBoundary>
     </BrowserRouter>

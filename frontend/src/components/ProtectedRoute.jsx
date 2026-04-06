@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { clearAuthSession, getStoredUser } from "../utils/authSession";
 
 /**
  * ProtectedRoute - Wraps routes that require authentication.
@@ -8,26 +9,17 @@ import { Navigate } from "react-router-dom";
  *   - requiredRole: Optional. If set (e.g., "admin"), only users with that role can access.
  */
 export default function ProtectedRoute({ children, requiredRole }) {
-  const userData = localStorage.getItem("user");
+  const user = getStoredUser();
   const token = localStorage.getItem("token");
 
   // Not logged in at all → redirect to login
-  if (!userData || !token) {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    return <Navigate to="/login" replace />;
-  }
-
-  let user;
-  try {
-    user = JSON.parse(userData);
-  } catch {
-    localStorage.removeItem("user");
+  if (!user || !token) {
+    clearAuthSession();
     return <Navigate to="/login" replace />;
   }
 
   if (!user || !user.role) {
-    localStorage.removeItem("user");
+    clearAuthSession();
     return <Navigate to="/login" replace />;
   }
 

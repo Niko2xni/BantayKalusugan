@@ -1,186 +1,79 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Download } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Download, Search } from 'lucide-react';
+
 import Layout from './Layout.jsx';
+import usePatientVitalsData from './hooks/usePatientVitalsData';
 import styles from './user_dashboard.module.css';
+import {
+  calculateVitalAverages,
+  getStatusColors,
+  getVitalStatus,
+  mapApiVitalToTableRow,
+} from './utils/patientVitals';
 
-const AnalyticsPage = () => {
-  const [vitalFilters, setVitalFilters] = useState({
-    date: ''
-  });
+function VitalValueTag({ type, value, suffix = '' }) {
+  const status = getVitalStatus(type, value);
+  const { bgColor, color } = getStatusColors(status);
 
-  // VITALS DATA
-  const allVitalsData = [
-    {
-      date: "Mar 11, 2026",
-      bloodPressure: "130/85",
-      heartRate: "78",
-      temperature: "36.6",
-      spO2: "97%",
-      respRate: "16",
-      bmi: "25.4",
-      visitType: "Check-up",
-      staffName: "Dr. Maria Santos"
-    },
-    {
-      date: "Feb 10, 2026",
-      bloodPressure: "128/82",
-      heartRate: "75",
-      temperature: "36.4",
-      spO2: "98%",
-      respRate: "15",
-      bmi: "25.2",
-      visitType: "Consultation",
-      staffName: "Nurse Ana Reyes"
-    },
-    {
-      date: "Jan 15, 2026",
-      bloodPressure: "132/88",
-      heartRate: "80",
-      temperature: "36.8",
-      spO2: "96%",
-      respRate: "17",
-      bmi: "25.6",
-      visitType: "Check-up",
-      staffName: "Dr. Juan dela Cruz"
-    },
-    {
-      date: "Dec 20, 2025",
-      bloodPressure: "135/90",
-      heartRate: "82",
-      temperature: "37.0",
-      spO2: "95%",
-      respRate: "18",
-      bmi: "25.8",
-      visitType: "Follow-up",
-      staffName: "Dr. Maria Santos"
-    },
-    {
-      date: "Nov 5, 2025",
-      bloodPressure: "130/85",
-      heartRate: "78",
-      temperature: "36.6",
-      spO2: "97%",
-      respRate: "16",
-      bmi: "25.4",
-      visitType: "Immunization",
-      staffName: "Nurse Ana Reyes"
-    },
-    {
-      date: "Oct 12, 2025",
-      bloodPressure: "128/82",
-      heartRate: "76",
-      temperature: "36.5",
-      spO2: "98%",
-      respRate: "15",
-      bmi: "25.3",
-      visitType: "Consultation",
-      staffName: "Dr. Juan dela Cruz"
-    },
-  ];
-
-  // FILTERED DATA
-  const filteredVitals = allVitalsData.filter(vital => {
-    return !vitalFilters.date || vital.date.includes(vitalFilters.date);
-  });
-
-  const handleVitalFilterChange = (e) => {
-    setVitalFilters({
-      ...vitalFilters,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  // Calculate vital statistics
-  const avgSystolic = (allVitalsData.reduce((sum, v) => sum + parseInt(v.bloodPressure.split('/')[0]), 0) / allVitalsData.length).toFixed(0);
-  const avgDiastolic = (allVitalsData.reduce((sum, v) => sum + parseInt(v.bloodPressure.split('/')[1]), 0) / allVitalsData.length).toFixed(0);
-  const avgHeartRate = (allVitalsData.reduce((sum, v) => sum + parseInt(v.heartRate), 0) / allVitalsData.length).toFixed(0);
-  const avgTemp = (allVitalsData.reduce((sum, v) => sum + parseFloat(v.temperature), 0) / allVitalsData.length).toFixed(1);
-  const avgSpO2 = (allVitalsData.reduce((sum, v) => sum + parseInt(v.spO2), 0) / allVitalsData.length).toFixed(1);
-  const avgBMI = (allVitalsData.reduce((sum, v) => sum + parseFloat(v.bmi), 0) / allVitalsData.length).toFixed(1);
-
-  const getVitalTag = (type, value) => {
-    let status = 'Normal';
-
-    if (type === 'bloodPressure') {
-      const [sys, dia] = value.split('/').map(Number);
-      if (sys >= 140 || dia >= 90) status = 'Abnormal';
-      else if (sys >= 120 || dia >= 80) status = 'Elevated';
-    } else if (type === 'heartRate') {
-      const hr = Number(value);
-      if (hr < 60 || hr > 100) status = 'Abnormal';
-      else if (hr > 90) status = 'Elevated';
-    } else if (type === 'temperature') {
-      const temp = parseFloat(value);
-      if (temp >= 38.0 || temp < 35.0) status = 'Abnormal';
-      else if (temp >= 37.5) status = 'Elevated';
-    } else if (type === 'spO2') {
-      const spo2 = parseInt(value);
-      if (spo2 < 92) status = 'Abnormal';
-      else if (spo2 < 95) status = 'Elevated';
-    } else if (type === 'respRate') {
-      const rr = Number(value);
-      if (rr < 12 || rr > 25) status = 'Abnormal';
-      else if (rr > 20) status = 'Elevated';
-    } else if (type === 'bmi') {
-      const bmiVal = parseFloat(value);
-      if (bmiVal >= 30) status = 'Abnormal';
-      else if (bmiVal >= 25 || bmiVal < 18.5) status = 'Elevated';
-    }
-
-    let bgColor = '#d1fae5';
-    let color = '#10b981';
-    if (status === 'Elevated') {
-      bgColor = '#fef3c7';
-      color = '#d97706';
-    } else if (status === 'Abnormal') {
-      bgColor = '#fee2e2';
-      color = '#dc2626';
-    }
-
-    return (
-      <span style={{
+  return (
+    <span
+      style={{
         backgroundColor: bgColor,
-        color: color,
+        color,
         padding: '4px 10px',
         borderRadius: '20px',
         fontSize: '0.85rem',
         fontWeight: '600',
-        display: 'inline-block'
-      }}>
-        {value}
-      </span>
-    );
+        display: 'inline-block',
+      }}
+    >
+      {value}
+      {suffix}
+    </span>
+  );
+}
+
+const AnalyticsPage = () => {
+  const [exportError, setExportError] = useState('');
+  const {
+    vitals,
+    overview,
+    loading,
+    error,
+    filters,
+    setFilters,
+    reloadVitalsData,
+    exportVitalsCsv,
+  } = usePatientVitalsData();
+
+  const tableRows = useMemo(() => vitals.map(mapApiVitalToTableRow), [vitals]);
+  const averages = useMemo(() => calculateVitalAverages(vitals), [vitals]);
+
+  const summary = {
+    avgSystolic: overview ? Math.round(overview.avg_systolic) : averages.avgSystolic,
+    avgDiastolic: overview ? Math.round(overview.avg_diastolic) : averages.avgDiastolic,
+    avgHeartRate: overview ? Math.round(overview.avg_heart_rate) : averages.avgHeartRate,
+    avgTemp: overview ? Number(overview.avg_temperature.toFixed(1)) : averages.avgTemp,
+    avgSpO2: overview ? Number(overview.avg_spo2.toFixed(1)) : averages.avgSpO2,
+    avgBMI: averages.avgBMI,
   };
 
-  const getAvgColor = (type, valStr) => {
-    // Reuse some logic to color the card text natively without the pill background
-    let status = 'Normal';
-    if (type === 'bloodPressure') {
-      const sys = parseInt(valStr);
-      if (sys >= 140) status = 'Abnormal';
-      else if (sys >= 120) status = 'Elevated';
-    } else if (type === 'heartRate') {
-      const hr = parseInt(valStr);
-      if (hr < 60 || hr > 100) status = 'Abnormal';
-      else if (hr > 90) status = 'Elevated';
-    } else if (type === 'temperature') {
-      const temp = parseFloat(valStr);
-      if (temp >= 38.0 || temp < 35.0) status = 'Abnormal';
-      else if (temp >= 37.5) status = 'Elevated';
-    } else if (type === 'spO2') {
-      const spo2 = parseInt(valStr);
-      if (spo2 < 92) status = 'Abnormal';
-      else if (spo2 < 95) status = 'Elevated';
-    } else if (type === 'bmi') {
-      const bmiVal = parseFloat(valStr);
-      if (bmiVal >= 30) status = 'Abnormal';
-      else if (bmiVal >= 25 || bmiVal < 18.5) status = 'Elevated';
-    }
+  const handleDateFilterChange = (event) => {
+    const { name, value } = event.target;
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-    if (status === 'Elevated') return '#d97706';
-    if (status === 'Abnormal') return '#dc2626';
-    return '#1e3a8a'; // Normal text color usually navy blue
+  const handleExport = async () => {
+    setExportError('');
+    try {
+      await exportVitalsCsv();
+    } catch (exportIssue) {
+      const message = exportIssue instanceof Error ? exportIssue.message : 'Unable to export vitals.';
+      setExportError(message);
+    }
   };
 
   return (
@@ -190,55 +83,85 @@ const AnalyticsPage = () => {
       heroDesc="View your complete vital signs history."
     >
       <section className={`${styles.section} ${styles['section--white']}`}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '10px', flexWrap: 'wrap' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>All Vital Sign Records</h3>
-          <button className={`${styles.btn} ${styles['btn--primary']} ${styles['btn--sm']}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Download size={16} /> Export
-          </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={reloadVitalsData}
+              className={`${styles.btn} ${styles['btn--outline-navy']} ${styles['btn--sm']}`}
+              disabled={loading}
+            >
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              className={`${styles.btn} ${styles['btn--primary']} ${styles['btn--sm']}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              disabled={loading || !tableRows.length}
+            >
+              <Download size={16} /> Export
+            </button>
+          </div>
         </div>
 
-        {/* SUMMARY CARDS */}
+        {exportError && (
+          <div style={{ marginBottom: '12px', color: '#dc2626', fontSize: '0.9rem' }}>{exportError}</div>
+        )}
+
         <div className={styles['card-grid']} style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
           <div style={{ padding: '1rem', borderRadius: '12px', backgroundColor: '#fff', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: getAvgColor('bloodPressure', avgSystolic), marginBottom: '2px' }}>{avgSystolic} mmHg</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e3a8a', marginBottom: '2px' }}>{summary.avgSystolic} mmHg</p>
             <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Avg Systolic</p>
           </div>
           <div style={{ padding: '1rem', borderRadius: '12px', backgroundColor: '#fff', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e3a8a', marginBottom: '2px' }}>{avgDiastolic} mmHg</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e3a8a', marginBottom: '2px' }}>{summary.avgDiastolic} mmHg</p>
             <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Avg Diastolic</p>
           </div>
           <div style={{ padding: '1rem', borderRadius: '12px', backgroundColor: '#fff', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: getAvgColor('heartRate', avgHeartRate), marginBottom: '2px' }}>{avgHeartRate} bpm</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e3a8a', marginBottom: '2px' }}>{summary.avgHeartRate} bpm</p>
             <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Avg Heart Rate</p>
           </div>
           <div style={{ padding: '1rem', borderRadius: '12px', backgroundColor: '#fff', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: getAvgColor('temperature', avgTemp), marginBottom: '2px' }}>{avgTemp} ┬░C</p>
-            <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Avg Temp</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e3a8a', marginBottom: '2px' }}>{summary.avgTemp} C</p>
+            <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Avg Temperature</p>
           </div>
           <div style={{ padding: '1rem', borderRadius: '12px', backgroundColor: '#fff', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: getAvgColor('spO2', avgSpO2), marginBottom: '2px' }}>{avgSpO2}%</p>
-            <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Avg SpOΓéé</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e3a8a', marginBottom: '2px' }}>{summary.avgSpO2}%</p>
+            <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Avg SpO2</p>
           </div>
           <div style={{ padding: '1rem', borderRadius: '12px', backgroundColor: '#fff', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: getAvgColor('bmi', avgBMI), marginBottom: '2px' }}>{avgBMI}</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e3a8a', marginBottom: '2px' }}>{summary.avgBMI || 0}</p>
             <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Avg BMI</p>
           </div>
         </div>
 
-        {/* SEARCH FILTERS */}
         <div className={styles['search-filters']}>
           <div className={styles['search-field']}>
             <Search size={16} />
             <input
               type="date"
-              name="date"
-              placeholder="Filter by date"
-              value={vitalFilters.date}
-              onChange={handleVitalFilterChange}
+              name="dateStart"
+              placeholder="Start date"
+              value={filters.dateStart}
+              onChange={handleDateFilterChange}
             />
           </div>
-
+          <div className={styles['search-field']}>
+            <Search size={16} />
+            <input
+              type="date"
+              name="dateEnd"
+              placeholder="End date"
+              value={filters.dateEnd}
+              onChange={handleDateFilterChange}
+            />
+          </div>
         </div>
+
+        {loading && <p style={{ marginBottom: '12px', color: '#64748b' }}>Loading vitals...</p>}
+        {error && <p style={{ marginBottom: '12px', color: '#dc2626' }}>{error}</p>}
 
         <div className={styles['table-wrapper']}>
           <table className={styles['vitals-table']}>
@@ -252,23 +175,34 @@ const AnalyticsPage = () => {
                 <th>Resp. Rate</th>
                 <th>BMI</th>
                 <th>Visit Type</th>
-                <th>Staff Name</th>
+                <th>Recorded By</th>
               </tr>
             </thead>
             <tbody>
-              {filteredVitals.map((vital, idx) => (
-                <tr key={idx}>
+              {tableRows.map((vital) => (
+                <tr key={vital.id}>
                   <td>{vital.date}</td>
-                  <td>{getVitalTag('bloodPressure', vital.bloodPressure)}</td>
-                  <td>{getVitalTag('heartRate', vital.heartRate)}</td>
-                  <td>{getVitalTag('temperature', vital.temperature)}</td>
-                  <td>{getVitalTag('spO2', vital.spO2)}</td>
-                  <td>{getVitalTag('respRate', vital.respRate)}</td>
-                  <td>{getVitalTag('bmi', vital.bmi)}</td>
+                  <td><VitalValueTag type="bloodPressure" value={vital.bloodPressure} /></td>
+                  <td><VitalValueTag type="heartRate" value={vital.heartRate} suffix=" bpm" /></td>
+                  <td><VitalValueTag type="temperature" value={vital.temperature} suffix=" C" /></td>
+                  <td><VitalValueTag type="spO2" value={vital.spO2} suffix="%" /></td>
+                  <td><VitalValueTag type="respRate" value={vital.respRate} suffix=" bpm" /></td>
+                  <td>
+                    {vital.bmi !== null
+                      ? <VitalValueTag type="bmi" value={vital.bmi} />
+                      : <span style={{ color: '#64748b' }}>N/A</span>}
+                  </td>
                   <td>{vital.visitType}</td>
                   <td>{vital.staffName}</td>
                 </tr>
               ))}
+              {!loading && !tableRows.length && (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: 'center', color: '#64748b', padding: '18px' }}>
+                    No vital records found for the selected range.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

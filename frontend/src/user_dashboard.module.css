@@ -931,6 +931,11 @@ ul  { list-style: none; }
   color: var(--navy-dark);
 }
 
+.notifications-mark-all:disabled {
+  color: var(--text-mute);
+  cursor: not-allowed;
+}
+
 .notifications-list {
   max-height: 360px;
   overflow-y: auto;
@@ -940,10 +945,13 @@ ul  { list-style: none; }
   display: flex;
   gap: 12px;
   padding: 16px;
+  width: 100%;
+  border: none;
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
   background-color: var(--white);
   transition: background-color var(--transition);
   cursor: pointer;
+  font: inherit;
   text-align: left;
 }
 

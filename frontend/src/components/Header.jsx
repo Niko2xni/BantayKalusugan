@@ -2,15 +2,66 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown } from 'lucide-react';
 import styles from '../user_dashboard.module.css';
+import { clearAuthSession, getStoredUser } from '../utils/authSession';
+import {
+  fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '../utils/patientPortalApi';
+
+
+function formatRelativeTime(isoTimestamp) {
+  const timestamp = new Date(isoTimestamp);
+  if (Number.isNaN(timestamp.getTime())) {
+    return '';
+  }
+
+  const diffMs = Date.now() - timestamp.getTime();
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diffMs < minute) {
+    return 'Just now';
+  }
+  if (diffMs < hour) {
+    const mins = Math.floor(diffMs / minute);
+    return `${mins} min${mins === 1 ? '' : 's'} ago`;
+  }
+  if (diffMs < day) {
+    const hours = Math.floor(diffMs / hour);
+    return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  }
+
+  const days = Math.floor(diffMs / day);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
 
 const Header = () => {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user")) || {};
+  const user = getStoredUser() || {};
   const fullName = user.first_name ? `${user.first_name} ${user.last_name}` : "User";
   const initial = user.first_name ? user.first_name.charAt(0) : "U";
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState('');
   const dropdownRef = useRef(null);
+
+
+  const loadNotifications = async () => {
+    setNotificationsLoading(true);
+    setNotificationsError('');
+    try {
+      const items = await fetchNotifications();
+      setNotifications(Array.isArray(items) ? items : []);
+    } catch (error) {
+      setNotificationsError(error instanceof Error ? error.message : 'Unable to load notifications.');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -22,16 +73,58 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const notifications = [
-    { id: 1, text: "New appointment set by Admin", time: "10 mins ago", read: false },
-    { id: 2, text: "Your lab results are ready to be viewed.", time: "1 hour ago", read: false },
-    { id: 3, text: "Reminder: Upcoming consultation tomorrow.", time: "1 day ago", read: true },
-  ];
+  useEffect(() => {
+    loadNotifications();
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+    const intervalId = window.setInterval(() => {
+      loadNotifications();
+    }, 60000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const unreadCount = notifications.filter((item) => !item.is_read).length;
+
+  const handleToggleNotifications = async () => {
+    const shouldOpen = !showNotifications;
+    setShowNotifications(shouldOpen);
+    if (shouldOpen) {
+      await loadNotifications();
+    }
+  };
+
+  const handleNotificationClick = async (notification) => {
+    if (notification.is_read) {
+      return;
+    }
+
+    try {
+      await markNotificationRead(notification.id);
+      setNotifications((prev) =>
+        prev.map((item) =>
+          item.id === notification.id
+            ? { ...item, is_read: true, read_at: new Date().toISOString() }
+            : item
+        )
+      );
+    } catch (error) {
+      setNotificationsError(error instanceof Error ? error.message : 'Unable to mark notification.');
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications((prev) =>
+        prev.map((item) => ({ ...item, is_read: true, read_at: new Date().toISOString() }))
+      );
+    } catch (error) {
+      setNotificationsError(error instanceof Error ? error.message : 'Unable to mark notifications as read.');
+    }
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
+    clearAuthSession();
     navigate("/login");
   };
 
@@ -47,7 +140,7 @@ const Header = () => {
           <div className={styles['notifications-wrapper']} ref={dropdownRef}>
             <button
               className={`${styles['top-header__btn']} ${styles['top-header__btn--icon']}`}
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={handleToggleNotifications}
             >
               <Bell size={20} color="#4b5563" />
               {unreadCount > 0 && <span className={styles['notifications-badge']}>{unreadCount}</span>}
@@ -57,17 +150,57 @@ const Header = () => {
               <div className={styles['notifications-dropdown']}>
                 <div className={styles['notifications-header']}>
                   <h4 style={{ margin: 0, fontSize: '0.95rem' }}>Notifications</h4>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--navy)', cursor: 'pointer' }}>Mark all as read</span>
+                  <button
+                    type="button"
+                    className={styles['notifications-mark-all']}
+                    onClick={handleMarkAllAsRead}
+                    disabled={unreadCount === 0}
+                  >
+                    Mark all as read
+                  </button>
                 </div>
                 <div className={styles['notifications-list']}>
-                  {notifications.map(notif => (
-                    <div key={notif.id} className={`${styles['notification-item']} ${!notif.read ? styles['notification-item--unread'] : ''}`}>
-                      <div className={styles['notification-dot']}></div>
-                      <div>
-                        <p style={{ margin: '0 0 4px', fontSize: '0.85rem', color: 'var(--text-dark)' }}>{notif.text}</p>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-mute)' }}>{notif.time}</span>
+                  {notificationsLoading && (
+                    <div className={styles['notification-item']}>
+                      <div className={styles['notification-content']}>
+                        <p className={styles['notification-text']}>Loading notifications...</p>
                       </div>
                     </div>
+                  )}
+
+                  {!notificationsLoading && notificationsError && (
+                    <div className={styles['notification-item']}>
+                      <div className={styles['notification-content']}>
+                        <p className={styles['notification-text']} style={{ color: '#dc2626' }}>{notificationsError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!notificationsLoading && !notificationsError && !notifications.length && (
+                    <div className={styles['notification-item']}>
+                      <div className={styles['notification-content']}>
+                        <p className={styles['notification-text']}>No notifications yet.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!notificationsLoading && !notificationsError && notifications.map((notif) => (
+                    <button
+                      key={notif.id}
+                      type="button"
+                      className={`${styles['notification-item']} ${notif.is_read ? styles['notification-item--read'] : styles['notification-item--unread']}`}
+                      onClick={() => handleNotificationClick(notif)}
+                    >
+                      {!notif.is_read && <div className={styles['notification-dot']}></div>}
+                      <div className={styles['notification-content']}>
+                        <p className={styles['notification-text']}>
+                          <strong>{notif.title}</strong> {notif.body}
+                        </p>
+                        <span className={styles['notification-time']}>
+                          {formatRelativeTime(notif.created_at)}
+                        </span>
+                      </div>
+                    </button>
                   ))}
                 </div>
               </div>

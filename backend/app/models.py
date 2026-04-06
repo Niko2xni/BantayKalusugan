@@ -77,3 +77,44 @@ class AdminSetting(Base):
     key = Column(String, unique=True, nullable=False, index=True)
     value = Column(Text, nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Appointment(Base):
+    __tablename__ = "appointments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    appointment_type = Column(String, nullable=False)
+    health_area = Column(String, nullable=False)
+    scheduled_at = Column(DateTime(timezone=True), nullable=False)
+    status = Column(String, nullable=False, default="Pending")
+    location = Column(String, nullable=True)
+    assigned_staff = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
+    requested_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    body = Column(Text, nullable=False)
+    kind = Column(String, nullable=False, default="general")
+    is_read = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    read_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    sender_type = Column(String, nullable=False)  # patient, bot, staff
+    message = Column(Text, nullable=False)
+    channel = Column(String, nullable=False, default="support")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

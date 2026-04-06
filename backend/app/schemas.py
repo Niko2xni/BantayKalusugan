@@ -35,6 +35,12 @@ class UserUpdate(BaseModel):
     barangay: Optional[str] = None
 
 
+class CurrentUserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+
+
 # Schema for reading/returning a user (never includes the password)
 class User(UserBase):
     id: int
@@ -86,6 +92,21 @@ class VitalSign(VitalSignBase):
 
     class Config:
         from_attributes = True
+
+
+class PatientAnalyticsOverview(BaseModel):
+    total_records: int
+    avg_systolic: float
+    avg_diastolic: float
+    avg_heart_rate: float
+    avg_temperature: float
+    avg_spo2: float
+    avg_respiratory_rate: float
+    avg_weight: float
+    avg_height: float
+    normal_bp_records: int
+    elevated_bp_records: int
+    abnormal_bp_records: int
 
 # --- Audit Logs Schemas ---
 
@@ -204,3 +225,74 @@ class PasswordChangeRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class AppointmentBase(BaseModel):
+    appointment_type: str
+    health_area: str
+    scheduled_at: datetime
+    status: str
+    location: Optional[str] = None
+    assigned_staff: Optional[str] = None
+    notes: Optional[str] = None
+    requested_notes: Optional[str] = None
+
+
+class Appointment(AppointmentBase):
+    id: int
+    patient_id: int
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AppointmentRequestCreate(BaseModel):
+    appointment_type: str
+    health_area: str
+    scheduled_at: datetime
+    location: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class AppointmentRescheduleRequest(BaseModel):
+    scheduled_at: datetime
+    notes: Optional[str] = None
+
+
+class NotificationBase(BaseModel):
+    title: str
+    body: str
+    kind: str
+    is_read: bool
+
+
+class Notification(NotificationBase):
+    id: int
+    user_id: int
+    created_at: Optional[datetime] = None
+    read_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ChatMessageBase(BaseModel):
+    sender_type: str
+    message: str
+    channel: str
+
+
+class ChatMessage(ChatMessageBase):
+    id: int
+    user_id: int
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ChatMessageCreate(BaseModel):
+    message: str
+    channel: str = "support"

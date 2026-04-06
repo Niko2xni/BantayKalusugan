@@ -1,11 +1,48 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
 import Layout from './Layout.jsx';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import styles from './user_dashboard.module.css';
+import { fetchHelpArticles } from './utils/patientPortalApi';
 
-const AccordionItem = ({ title, subtitle, content }) => {
+
+const fallbackFaqItems = [
+  {
+    id: 'fallback-getting-started',
+    title: 'Getting Started',
+    subtitle: 'Using your dashboard and pages.',
+    content:
+      'Use Dashboard for quick health summary, Analytics for trends, Schedules for appointments, and Chat for support.',
+  },
+  {
+    id: 'fallback-vitals',
+    title: 'Vitals and Analytics',
+    subtitle: 'Understanding health records.',
+    content:
+      'Use date filters to review your records and export data from Analytics when needed.',
+  },
+  {
+    id: 'fallback-appointments',
+    title: 'Appointments',
+    subtitle: 'Requesting and managing schedules.',
+    content:
+      'Use Schedules to request appointments and track pending, confirmed, completed, or cancelled status changes.',
+  },
+  {
+    id: 'fallback-account',
+    title: 'Account and Security',
+    subtitle: 'Updating profile and password.',
+    content:
+      'Use Profile to update contact details and manage your password securely.',
+  },
+];
+
+
+const AccordionItem = ({ title, subtitle, content, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    setIsOpen(defaultOpen);
+  }, [defaultOpen]);
 
   return (
     <div className={styles.card} style={{ padding: '0', overflow: 'hidden', marginBottom: '16px', border: isOpen ? '1px solid var(--navy)' : '1px solid rgba(0, 0, 0, 0.04)', transition: 'all 0.2s ease', position: 'relative' }}>
@@ -44,30 +81,44 @@ const AccordionItem = ({ title, subtitle, content }) => {
 };
 
 const HelpPage = () => {
-  const linkStyle = { color: 'var(--navy)', fontWeight: '600' };
+  const [faqItems, setFaqItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const faqItems = [
-    {
-      title: "Getting Started",
-      subtitle: "New users logging in for the first time.",
-      content: <>Welcome to BantayKalusugan! Your dashboard shows a quick summary of your recent vitals, appointments, and latest messages. Use the left-hand navigation to move between sections like <Link to="/analytics" style={linkStyle}>Analytics</Link>, <Link to="/schedules" style={linkStyle}>Schedules</Link>, and <Link to="/chat" style={linkStyle}>Chat</Link>.</>
-    },
-    {
-      title: "Vital Signs 101",
-      subtitle: "Understanding the numbers and graphs on the screen.",
-      content: <>Go to the <Link to="/analytics" style={linkStyle}>Analytics page</Link> to view detailed health records. You can filter by date and vital type to find the readings you need. Each graph represents your vital history over time.</>
-    },
-    {
-      title: "Schedules",
-      subtitle: "Finding out when your next health check is.",
-      content: <>Visit the <Link to="/schedules" style={linkStyle}>Schedules page</Link> to see your upcoming appointments and their status. If you need to change an appointment, please contact the clinic directly.</>
-    },
-    {
-      title: "Account Settings",
-      subtitle: "Changing passwords or notification preferences.",
-      content: <>You can update your personal information or notification preferences by visiting the <Link to="/profile" style={linkStyle}>Profile setting</Link> from the top right hand menu.</>
+
+  useEffect(() => {
+    const loadHelpArticles = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const items = await fetchHelpArticles();
+        setFaqItems(items.length ? items : fallbackFaqItems);
+      } catch (loadIssue) {
+        setFaqItems(fallbackFaqItems);
+        setError(loadIssue instanceof Error ? loadIssue.message : 'Unable to load help content.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadHelpArticles();
+  }, []);
+
+
+  const filteredItems = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return faqItems;
     }
-  ];
+
+    const keyword = searchTerm.toLowerCase();
+    return faqItems.filter((item) => {
+      const title = String(item.title || '').toLowerCase();
+      const subtitle = String(item.subtitle || '').toLowerCase();
+      const content = String(item.content || '').toLowerCase();
+      return title.includes(keyword) || subtitle.includes(keyword) || content.includes(keyword);
+    });
+  }, [faqItems, searchTerm]);
 
   return (
     <Layout
@@ -80,17 +131,39 @@ const HelpPage = () => {
           <h3 className={styles['subsection-header__title']}>How to use this website</h3>
         </div>
 
+        <div style={{ maxWidth: '1200px', margin: '0 auto 16px' }}>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search help articles"
+            style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #d1d5db', fontSize: '0.95rem' }}
+          />
+          {error && <p style={{ marginTop: '8px', color: '#b91c1c', fontSize: '0.85rem' }}>{error}</p>}
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '32px', alignItems: 'start', maxWidth: '1200px', margin: '0 auto' }}>
-          <div>
-            {faqItems.slice(0, 2).map((item, index) => (
-              <AccordionItem key={index} title={item.title} subtitle={item.subtitle} content={item.content} />
-            ))}
-          </div>
-          <div>
-            {faqItems.slice(2, 4).map((item, index) => (
-              <AccordionItem key={index + 2} title={item.title} subtitle={item.subtitle} content={item.content} />
-            ))}
-          </div>
+          {loading && (
+            <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
+              <p style={{ color: '#64748b' }}>Loading help content...</p>
+            </div>
+          )}
+
+          {!loading && !filteredItems.length && (
+            <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
+              <p style={{ color: '#64748b' }}>No help articles match your search.</p>
+            </div>
+          )}
+
+          {!loading && filteredItems.map((item, index) => (
+            <AccordionItem
+              key={item.id || item.title || index}
+              title={item.title}
+              subtitle={item.subtitle}
+              content={item.content}
+              defaultOpen={index === 0}
+            />
+          ))}
         </div>
       </section>
     </Layout>

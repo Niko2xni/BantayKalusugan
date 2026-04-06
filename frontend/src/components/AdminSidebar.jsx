@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { clearAuthSession } from "../utils/authSession";
 
 const navItems = [
   { icon: <Home size={20} />, label: "Dashboard", id: "dashboard", path: "/admin" },
@@ -25,8 +26,7 @@ export default function AdminSidebar({ activeNav, setActiveNav }) {
   const location = useLocation();
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+    clearAuthSession();
     navigate("/login");
   };
 
