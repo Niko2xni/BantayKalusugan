@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import date, datetime
 
 # --- User Schemas ---
@@ -105,3 +105,102 @@ class AuditLog(AuditLogBase):
 
     class Config:
         from_attributes = True
+
+
+class AuditLogItem(AuditLog):
+    admin_name: Optional[str] = None
+    target_name: Optional[str] = None
+
+
+class PaginatedAuditLogs(BaseModel):
+    items: List[AuditLogItem]
+    total: int
+    page: int
+    page_size: int
+
+
+class BPTrendPoint(BaseModel):
+    month: str
+    systolic: int
+    diastolic: int
+
+
+class RegistrationTrendPoint(BaseModel):
+    month: str
+    patients: int
+
+
+class MonthlySummaryPoint(BaseModel):
+    month: str
+    patients: int
+    visits: int
+    avg_bp: int
+
+
+class ReportOverviewResponse(BaseModel):
+    total_patients: int
+    bp_records_today: int
+    total_visits: int
+    avg_systolic: float
+    avg_diastolic: float
+    reports_generated: int
+
+
+class ReportTrendsResponse(BaseModel):
+    bp_trends: List[BPTrendPoint]
+    registrations: List[RegistrationTrendPoint]
+    monthly_summary: List[MonthlySummaryPoint]
+
+
+class ConditionDistributionItem(BaseModel):
+    name: str
+    value: int
+
+
+class AgeDistributionItem(BaseModel):
+    range: str
+    count: int
+
+
+class ReportDistributionsResponse(BaseModel):
+    health_conditions: List[ConditionDistributionItem]
+    age_distribution: List[AgeDistributionItem]
+
+
+class ReportGenerationLogRequest(BaseModel):
+    report_type: str
+    date_range: str
+
+
+class AdminProfileSettings(BaseModel):
+    name: str
+    email: EmailStr
+    phone: str
+    role: str
+
+
+class BarangaySettings(BaseModel):
+    name: str
+    municipality: str
+    province: str
+    address: str
+    contact_number: str
+
+
+class SystemSettings(BaseModel):
+    language: str
+    timezone: str
+    date_format: str
+    notifications: bool
+    email_alerts: bool
+    auto_backup: bool
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+    confirm_password: str
+
+
+class MessageResponse(BaseModel):
+    message: str

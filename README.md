@@ -38,6 +38,26 @@ The frontend handles the visuals and user interfaces.
    ```
 4. Look for the local URL in your terminal (usually `http://localhost:5173`) and open it in your web browser. Check carefully if it prompts `http://localhost:5174` or another port, and use that instead.
 
+### Quality Checks (Optional But Recommended)
+You can run automated checks before release:
+
+1. Backend tests:
+   ```bash
+   cd BantayKalusugan/backend
+   venv\Scripts\python.exe -m pytest -q
+   ```
+2. Frontend checks:
+   ```bash
+   cd BantayKalusugan/frontend
+   npm run lint
+   npm run test
+   npm run build
+   ```
+3. Full smoke check from repo root (PowerShell):
+   ```bash
+   ./scripts/smoke_admin.ps1
+   ```
+
 ---
 
 ## 👥 Part 2: Creating Accounts

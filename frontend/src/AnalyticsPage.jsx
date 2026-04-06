@@ -154,7 +154,6 @@ const AnalyticsPage = () => {
   };
 
   const getAvgColor = (type, valStr) => {
-    const valObj = { value: valStr, type: type };
     // Reuse some logic to color the card text natively without the pill background
     let status = 'Normal';
     if (type === 'bloodPressure') {

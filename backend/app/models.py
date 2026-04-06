@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, Date, DateTime, Float, ForeignKey
+from sqlalchemy import Boolean, Column, Integer, String, Date, DateTime, Float, ForeignKey, Text
 from sqlalchemy.sql import func
 from .database import Base
 
@@ -68,3 +68,12 @@ class AuditLog(Base):
     target_id = Column(Integer, nullable=False)
     target_type = Column(String, nullable=False)
     details = Column(String, nullable=False)
+
+
+class AdminSetting(Base):
+    __tablename__ = "admin_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, nullable=False, index=True)
+    value = Column(Text, nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

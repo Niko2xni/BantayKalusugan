@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./AdminDashboard.css";
 import AdminSidebar from "./components/AdminSidebar";
+import { adminFetch, AUTH_REDIRECT_ERROR } from "./utils/adminApi";
 import {
     Users,
     Activity,
@@ -8,8 +9,6 @@ import {
     Bell,
     ChevronDown,
     Download,
-    TrendingUp,
-    TrendingDown,
     BarChart3,
     FileBarChart,
     Heart,
@@ -31,33 +30,155 @@ import {
 } from "recharts";
 
 
-const monthlyReports = [
-    { month: "Jan", patients: 45, visits: 120, avgBP: 128 },
-    { month: "Feb", patients: 52, visits: 145, avgBP: 126 },
-    { month: "Mar", patients: 48, visits: 138, avgBP: 130 },
-    { month: "Apr", patients: 61, visits: 172, avgBP: 129 },
-    { month: "May", patients: 58, visits: 165, avgBP: 127 },
-    { month: "Jun", patients: 67, visits: 189, avgBP: 125 },
-];
-
-const conditionDistribution = [
-    { name: "Normal", value: 45, color: "#2E5895" },
-    { name: "Hypertensive", value: 30, color: "#FFC32B" },
-    { name: "High Risk", value: 15, color: "#C23B21" },
-    { name: "Under Monitoring", value: 10, color: "#F7E976" },
-];
-
-const ageDistribution = [
-    { range: "18-30", count: 15 },
-    { range: "31-45", count: 28 },
-    { range: "46-60", count: 35 },
-    { range: "61-75", count: 18 },
-    { range: "76+", count: 4 },
-];
-
+const CONDITION_COLORS = {
+    Normal: "#2E5895",
+    Hypertensive: "#FFC32B",
+    "High Risk": "#C23B21",
+    "Under Monitoring": "#F7E976",
+};
 export default function AdminReports() {
     const [reportType, setReportType] = useState("overview");
     const [dateRange, setDateRange] = useState("thisMonth");
+    const [isExporting, setIsExporting] = useState(false);
+    const [overview, setOverview] = useState({
+        total_patients: 0,
+        bp_records_today: 0,
+        total_visits: 0,
+        avg_systolic: 0,
+        avg_diastolic: 0,
+        reports_generated: 0,
+    });
+    const [trends, setTrends] = useState({
+        bp_trends: [],
+        registrations: [],
+        monthly_summary: [],
+    });
+    const [distributions, setDistributions] = useState({
+        health_conditions: [],
+        age_distribution: [],
+    });
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        let isCancelled = false;
+
+        const fetchReports = async () => {
+            setIsLoading(true);
+            setError("");
+
+            try {
+                const [overviewRes, trendsRes, distributionsRes] = await Promise.all([
+                    adminFetch(`/api/admin/reports/overview?date_range=${dateRange}`),
+                    adminFetch(`/api/admin/reports/trends?date_range=${dateRange}`),
+                    adminFetch(`/api/admin/reports/distributions?date_range=${dateRange}`),
+                ]);
+
+                if (!overviewRes.ok || !trendsRes.ok || !distributionsRes.ok) {
+                    throw new Error("Failed to load reports data");
+                }
+
+                const [overviewData, trendsData, distributionData] = await Promise.all([
+                    overviewRes.json(),
+                    trendsRes.json(),
+                    distributionsRes.json(),
+                ]);
+
+                if (!isCancelled) {
+                    setOverview(overviewData);
+                    setTrends(trendsData);
+                    setDistributions(distributionData);
+                }
+            } catch (fetchError) {
+                if (fetchError.message !== AUTH_REDIRECT_ERROR && !isCancelled) {
+                    setError(fetchError.message || "Unable to load reports.");
+                }
+            } finally {
+                if (!isCancelled) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        fetchReports();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [dateRange]);
+
+    const monthlyReports = useMemo(() => {
+        return trends.monthly_summary || [];
+    }, [trends]);
+
+    const conditionDistribution = useMemo(() => {
+        return (distributions.health_conditions || []).map((item) => ({
+            ...item,
+            color: CONDITION_COLORS[item.name] || "#CCCCCC",
+        }));
+    }, [distributions]);
+
+    const ageDistribution = useMemo(() => {
+        return distributions.age_distribution || [];
+    }, [distributions]);
+
+    const handleExportReport = async () => {
+        setIsExporting(true);
+        try {
+            const params = new URLSearchParams({
+                format: "csv",
+                report_type: reportType,
+                date_range: dateRange,
+            });
+            const response = await adminFetch(`/api/admin/reports/export?${params.toString()}`);
+            if (!response.ok) {
+                throw new Error("Failed to export report");
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `admin-report-${reportType}-${dateRange}-${new Date().toISOString().split("T")[0]}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (exportError) {
+            if (exportError.message !== AUTH_REDIRECT_ERROR) {
+                setError(exportError.message || "Unable to export report.");
+            }
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const metricCards = [
+        {
+            label: "Total Patients",
+            value: String(overview.total_patients ?? 0),
+            icon: <Users size={24} />,
+            color: "#2E5895",
+        },
+        {
+            label: "Total Visits",
+            value: String(overview.total_visits ?? 0),
+            icon: <Activity size={24} />,
+            color: "#FFC32B",
+        },
+        {
+            label: "Avg Blood Pressure",
+            value: `${Math.round(overview.avg_systolic ?? 0)}/${Math.round(overview.avg_diastolic ?? 0)}`,
+            icon: <Heart size={24} />,
+            color: "#C23B21",
+        },
+        {
+            label: "Reports Generated",
+            value: String(overview.reports_generated ?? 0),
+            icon: <FileText size={24} />,
+            color: "#F7E976",
+        },
+    ];
 
     return (
         <div className="admin-layout">
@@ -131,22 +252,32 @@ export default function AdminReports() {
                             </div>
 
                             <button
-                                style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.25rem", borderRadius: "0.5rem", fontSize: "0.875rem", backgroundColor: "#2E5895", color: "white", fontWeight: 600, border: "none", cursor: "pointer" }}
+                                onClick={handleExportReport}
+                                disabled={isLoading || isExporting || monthlyReports.length === 0}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.5rem",
+                                    padding: "0.625rem 1.25rem",
+                                    borderRadius: "0.5rem",
+                                    fontSize: "0.875rem",
+                                    backgroundColor: "#2E5895",
+                                    color: "white",
+                                    fontWeight: 600,
+                                    border: "none",
+                                    cursor: isLoading || isExporting || monthlyReports.length === 0 ? "not-allowed" : "pointer",
+                                    opacity: isLoading || isExporting || monthlyReports.length === 0 ? 0.6 : 1,
+                                }}
                             >
                                 <Download size={16} />
-                                Export Report
+                                {isExporting ? "Exporting..." : "Export Report"}
                             </button>
                         </div>
                     </div>
 
                     {/* Key Metrics */}
                     <div className="stat-cards-row" style={{ marginBottom: "1.5rem" }}>
-                        {[
-                            { label: "Total Patients", value: "100", change: "+12%", icon: <Users size={24} />, color: "#2E5895" },
-                            { label: "Total Visits", value: "189", change: "+8%", icon: <Activity size={24} />, color: "#FFC32B" },
-                            { label: "Avg Blood Pressure", value: "125/82", change: "-3%", icon: <Heart size={24} />, color: "#C23B21" },
-                            { label: "Reports Generated", value: "24", change: "+15%", icon: <FileText size={24} />, color: "#F7E976" },
-                        ].map((metric, idx) => (
+                        {metricCards.map((metric, idx) => (
                             <div key={idx} className="stat-card">
                                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "0.75rem" }}>
                                     <div
@@ -154,10 +285,6 @@ export default function AdminReports() {
                                         style={{ backgroundColor: `${metric.color}20`, color: metric.color }}
                                     >
                                         {metric.icon}
-                                    </div>
-                                    <div className="stat-card-change" style={{ color: metric.change.startsWith('+') ? "#2E5895" : "#C23B21", backgroundColor: "transparent" }}>
-                                        {metric.change.startsWith('+') ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                                        {metric.change}
                                     </div>
                                 </div>
                                 <div className="stat-card-body">
@@ -167,6 +294,18 @@ export default function AdminReports() {
                             </div>
                         ))}
                     </div>
+
+                    {isLoading && (
+                        <div className="chart-card" style={{ marginBottom: "1.5rem", textAlign: "center", color: "#666" }}>
+                            Loading reports data...
+                        </div>
+                    )}
+
+                    {error && !isLoading && (
+                        <div className="chart-card" style={{ marginBottom: "1.5rem", textAlign: "center", color: "#C23B21" }}>
+                            {error}
+                        </div>
+                    )}
 
                     {/* Charts Grid */}
                     <div className="charts-row" style={{ marginBottom: "1.5rem" }}>
@@ -228,7 +367,7 @@ export default function AdminReports() {
                                     <YAxis tick={{ fontSize: 12, fill: "#888" }} />
                                     <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
                                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                                    <Line type="monotone" dataKey="avgBP" stroke="#C23B21" strokeWidth={2.5} dot={{ r: 5, fill: "#C23B21" }} name="Avg Systolic BP" />
+                                    <Line type="monotone" dataKey="avg_bp" stroke="#C23B21" strokeWidth={2.5} dot={{ r: 5, fill: "#C23B21" }} name="Avg Systolic BP" />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -273,7 +412,7 @@ export default function AdminReports() {
                                             <td>{report.patients}</td>
                                             <td>{report.visits}</td>
                                             <td>
-                                                <span style={{ fontWeight: 600, color: "#C23B21" }}>{report.avgBP}</span>
+                                                <span style={{ fontWeight: 600, color: "#C23B21" }}>{report.avg_bp}</span>
                                             </td>
                                         </tr>
                                     ))}

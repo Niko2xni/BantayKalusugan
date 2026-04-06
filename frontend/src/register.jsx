@@ -275,7 +275,7 @@ export default function Register() {
 
       setSuccess(true);
       setTimeout(() => navigate("/login"), 2000);
-    } catch (err) {
+    } catch {
       setError("Unable to connect to the server. Please try again later.");
     }
   };

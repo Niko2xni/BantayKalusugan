@@ -1,7 +1,10 @@
+from datetime import date
+
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Literal
 
 from . import crud, models, schemas, security
 from .database import engine, get_db
@@ -150,14 +153,169 @@ def get_admin_stats(
 ):
     return crud.get_community_analytics(db)
 
-@app.get("/api/admin/audit-logs", response_model=List[schemas.AuditLog])
-def get_admin_audit_logs(
-    skip: int = 0,
-    limit: int = 500,
+
+@app.get("/api/admin/reports/overview", response_model=schemas.ReportOverviewResponse)
+def get_reports_overview(
+    date_range: Literal["thisMonth", "lastMonth", "last3Months", "last6Months", "thisYear"] = "thisMonth",
     db: Session = Depends(get_db),
     current_admin: models.User = Depends(security.require_admin),
 ):
-    return crud.get_audit_logs(db, skip=skip, limit=limit)
+    return crud.get_report_overview(db, date_range=date_range)
+
+
+@app.get("/api/admin/reports/trends", response_model=schemas.ReportTrendsResponse)
+def get_reports_trends(
+    date_range: Literal["thisMonth", "lastMonth", "last3Months", "last6Months", "thisYear"] = "thisMonth",
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    return crud.get_report_trends(db, date_range=date_range)
+
+
+@app.get("/api/admin/reports/distributions", response_model=schemas.ReportDistributionsResponse)
+def get_reports_distributions(
+    date_range: Literal["thisMonth", "lastMonth", "last3Months", "last6Months", "thisYear"] = "thisMonth",
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    return crud.get_report_distributions(db, date_range=date_range)
+
+
+@app.get("/api/admin/reports/export")
+def export_report_csv(
+    format: Literal["csv", "pdf"] = "csv",
+    report_type: Literal["overview", "patients", "vitals", "conditions"] = "overview",
+    date_range: Literal["thisMonth", "lastMonth", "last3Months", "last6Months", "thisYear"] = "thisMonth",
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    if format == "pdf":
+        raise HTTPException(status_code=501, detail="PDF export is not implemented yet")
+
+    csv_content = crud.export_report_csv(
+        db=db,
+        current_admin=current_admin,
+        report_type=report_type,
+        date_range=date_range,
+    )
+    filename = f"admin-report-{report_type}-{date_range}-{date.today().isoformat()}.csv"
+
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.post("/api/admin/reports/log-generation", response_model=schemas.MessageResponse)
+def log_report_generation(
+    payload: schemas.ReportGenerationLogRequest,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    crud.log_report_generation(
+        db=db,
+        current_admin=current_admin,
+        report_type=payload.report_type,
+        date_range=payload.date_range,
+    )
+    return {"message": "Report generation logged"}
+
+
+@app.get("/api/admin/audit-logs", response_model=schemas.PaginatedAuditLogs)
+def get_admin_audit_logs(
+    page: int = 1,
+    page_size: int = 50,
+    action: str | None = None,
+    target_type: str | None = None,
+    actor_id: int | None = None,
+    date_start: date | None = None,
+    date_end: date | None = None,
+    search: str | None = None,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    return crud.get_paginated_audit_logs(
+        db,
+        page=page,
+        page_size=page_size,
+        action=action,
+        target_type=target_type,
+        actor_id=actor_id,
+        date_start=date_start,
+        date_end=date_end,
+        search=search,
+    )
+
+
+@app.get("/api/admin/settings/profile", response_model=schemas.AdminProfileSettings)
+def get_admin_profile_settings(
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    return crud.get_admin_profile_settings(current_admin)
+
+
+@app.put("/api/admin/settings/profile", response_model=schemas.AdminProfileSettings)
+def update_admin_profile_settings(
+    profile: schemas.AdminProfileSettings,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    try:
+        return crud.update_admin_profile_settings(db, current_admin, profile)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/api/admin/settings/barangay", response_model=schemas.BarangaySettings)
+def get_admin_barangay_settings(
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    return crud.get_barangay_settings(db)
+
+
+@app.put("/api/admin/settings/barangay", response_model=schemas.BarangaySettings)
+def update_admin_barangay_settings(
+    barangay: schemas.BarangaySettings,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    return crud.update_barangay_settings(db, current_admin, barangay)
+
+
+@app.get("/api/admin/settings/system", response_model=schemas.SystemSettings)
+def get_admin_system_settings(
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    return crud.get_system_settings(db)
+
+
+@app.put("/api/admin/settings/system", response_model=schemas.SystemSettings)
+def update_admin_system_settings(
+    settings: schemas.SystemSettings,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    return crud.update_system_settings(db, current_admin, settings)
+
+
+@app.post("/api/admin/settings/change-password", response_model=schemas.MessageResponse)
+def change_admin_password(
+    password_data: schemas.PasswordChangeRequest,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    try:
+        crud.change_admin_password(db, current_admin, password_data)
+    except PermissionError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    return {"message": "Password updated successfully"}
 
 
 
