@@ -35,6 +35,7 @@ function VitalValueTag({ type, value, suffix = '' }) {
 
 const AnalyticsPage = () => {
   const [exportError, setExportError] = useState('');
+  const [exportFormat, setExportFormat] = useState('csv');
   const {
     vitals,
     overview,
@@ -43,7 +44,7 @@ const AnalyticsPage = () => {
     filters,
     setFilters,
     reloadVitalsData,
-    exportVitalsCsv,
+    exportVitalsFile,
   } = usePatientVitalsData();
 
   const tableRows = useMemo(() => vitals.map(mapApiVitalToTableRow), [vitals]);
@@ -69,7 +70,7 @@ const AnalyticsPage = () => {
   const handleExport = async () => {
     setExportError('');
     try {
-      await exportVitalsCsv();
+      await exportVitalsFile(exportFormat);
     } catch (exportIssue) {
       const message = exportIssue instanceof Error ? exportIssue.message : 'Unable to export vitals.';
       setExportError(message);
@@ -86,6 +87,23 @@ const AnalyticsPage = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '10px', flexWrap: 'wrap' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1f2937', margin: 0 }}>All Vital Sign Records</h3>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <select
+              value={exportFormat}
+              onChange={(event) => setExportFormat(event.target.value)}
+              aria-label="Export format"
+              style={{
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '6px 10px',
+                fontSize: '0.875rem',
+                color: '#1f2937',
+                background: '#ffffff',
+                minWidth: '96px',
+              }}
+            >
+              <option value="csv">CSV</option>
+              <option value="pdf">PDF</option>
+            </select>
             <button
               type="button"
               onClick={reloadVitalsData}
@@ -101,7 +119,7 @@ const AnalyticsPage = () => {
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               disabled={loading || !tableRows.length}
             >
-              <Download size={16} /> Export
+              <Download size={16} /> Export {exportFormat.toUpperCase()}
             </button>
           </div>
         </div>

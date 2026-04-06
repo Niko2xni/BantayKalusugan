@@ -192,7 +192,7 @@ def read_current_patient_analytics_overview(
 
 
 @app.get("/api/me/vitals/export")
-def export_current_patient_vitals_csv(
+def export_current_patient_vitals(
     format: Literal["csv", "pdf"] = "csv",
     date_start: date | None = None,
     date_end: date | None = None,
@@ -200,7 +200,19 @@ def export_current_patient_vitals_csv(
     current_patient: models.User = Depends(security.require_patient),
 ):
     if format == "pdf":
-        raise HTTPException(status_code=501, detail="PDF export is not implemented yet")
+        pdf_content = crud.export_patient_vitals_pdf(
+            db,
+            patient=current_patient,
+            date_start=date_start,
+            date_end=date_end,
+        )
+        filename = f"my-vitals-{date.today().isoformat()}.pdf"
+
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     csv_content = crud.export_patient_vitals_csv(
         db,

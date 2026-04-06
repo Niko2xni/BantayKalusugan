@@ -18,6 +18,22 @@ function buildQueryString({ skip = 0, limit = 500, dateStart = "", dateEnd = "" 
   return params.toString();
 }
 
+
+function buildExportQueryString({ dateStart = "", dateEnd = "", format = "csv" } = {}) {
+  const params = new URLSearchParams();
+  params.set("format", format);
+
+  if (dateStart) {
+    params.set("date_start", dateStart);
+  }
+
+  if (dateEnd) {
+    params.set("date_end", dateEnd);
+  }
+
+  return params.toString();
+}
+
 export default function usePatientVitalsData(initialFilters = {}) {
   const [filters, setFilters] = useState({
     skip: 0,
@@ -92,12 +108,12 @@ export default function usePatientVitalsData(initialFilters = {}) {
     loadVitalsData();
   }, [loadVitalsData]);
 
-  const exportVitalsCsv = useCallback(async () => {
-    const query = buildQueryString({
+  const exportVitalsFile = useCallback(async (format = "csv") => {
+    const normalizedFormat = format === "pdf" ? "pdf" : "csv";
+    const query = buildExportQueryString({
       dateStart: filters.dateStart,
       dateEnd: filters.dateEnd,
-      skip: 0,
-      limit: 1,
+      format: normalizedFormat,
     });
 
     const response = await userFetch(`/api/me/vitals/export?${query}`);
@@ -109,13 +125,28 @@ export default function usePatientVitalsData(initialFilters = {}) {
     const csvBlob = await response.blob();
     const objectUrl = URL.createObjectURL(csvBlob);
     const link = document.createElement("a");
+
+    const disposition = response.headers.get("content-disposition") || "";
+    const filenameMatch = disposition.match(/filename="?([^"]+)"?/i);
+    const fallbackFilename = `my-vitals-${new Date().toISOString().split("T")[0]}.${normalizedFormat}`;
+
     link.href = objectUrl;
-    link.download = `my-vitals-${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = filenameMatch?.[1] || fallbackFilename;
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(objectUrl);
   }, [filters.dateEnd, filters.dateStart]);
+
+
+  const exportVitalsCsv = useCallback(async () => {
+    await exportVitalsFile("csv");
+  }, [exportVitalsFile]);
+
+
+  const exportVitalsPdf = useCallback(async () => {
+    await exportVitalsFile("pdf");
+  }, [exportVitalsFile]);
 
   return {
     vitals,
@@ -126,6 +157,8 @@ export default function usePatientVitalsData(initialFilters = {}) {
     filters,
     setFilters,
     reloadVitalsData: loadVitalsData,
+    exportVitalsFile,
     exportVitalsCsv,
+    exportVitalsPdf,
   };
 }

@@ -244,6 +244,40 @@ def test_patient_vitals_export_csv(client, db_session, user_factory):
     assert "2026-04-03" in response.text
 
 
+def test_patient_vitals_export_pdf(client, db_session, user_factory):
+    admin = user_factory(email="admin.vitals.export.pdf@example.com", role="admin")
+    patient = user_factory(email="patient.vitals.export.pdf@example.com", role="patient")
+
+    crud.create_vital_sign(
+        db_session,
+        schemas.VitalSignCreate(
+            patient_id=patient.id,
+            date="2026-04-03",
+            time="07:45",
+            systolic=126,
+            diastolic=81,
+            heart_rate=74,
+            temperature=36.6,
+            spo2=98,
+            respiratory_rate=16,
+            weight=63.8,
+            height=164.0,
+            recorded_by="Admin Staff",
+        ),
+        admin.id,
+    )
+
+    response = client.get(
+        "/api/me/vitals/export?format=pdf&date_start=2026-04-01&date_end=2026-04-30",
+        headers=_auth_headers(patient),
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert "attachment; filename=\"my-vitals-" in response.headers["content-disposition"]
+    assert response.content.startswith(b"%PDF")
+
+
 def test_admin_cannot_access_patient_only_vitals_endpoints(client, user_factory):
     admin = user_factory(email="admin.only.patient.endpoint@example.com", role="admin")
 

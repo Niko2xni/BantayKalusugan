@@ -1144,6 +1144,157 @@ def export_patient_vitals_csv(
 
     return output.getvalue()
 
+
+def export_patient_vitals_pdf(
+    db: Session,
+    patient: models.User,
+    date_start: date | None = None,
+    date_end: date | None = None,
+):
+    vitals = get_vital_signs_by_patient_filtered(
+        db,
+        patient_id=patient.id,
+        skip=0,
+        limit=5000,
+        date_start=date_start,
+        date_end=date_end,
+    )
+
+    output = io.BytesIO()
+    document = SimpleDocTemplate(
+        output,
+        pagesize=letter,
+        rightMargin=0.5 * inch,
+        leftMargin=0.5 * inch,
+        topMargin=0.6 * inch,
+        bottomMargin=0.5 * inch,
+    )
+
+    styles = getSampleStyleSheet()
+    styles.add(
+        ParagraphStyle(
+            name="PatientVitalsTitle",
+            parent=styles["Title"],
+            fontName="Helvetica-Bold",
+            fontSize=18,
+            leading=22,
+            textColor=colors.HexColor("#2E5895"),
+            spaceAfter=8,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="PatientVitalsMeta",
+            parent=styles["BodyText"],
+            fontName="Helvetica",
+            fontSize=10,
+            leading=13,
+            textColor=colors.HexColor("#4A5568"),
+            spaceAfter=3,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="PatientVitalsSection",
+            parent=styles["Heading2"],
+            fontName="Helvetica-Bold",
+            fontSize=12,
+            leading=15,
+            textColor=colors.HexColor("#1F2937"),
+            spaceBefore=8,
+            spaceAfter=6,
+        )
+    )
+
+    patient_name = f"{patient.first_name} {patient.last_name}".strip()
+    story = []
+
+    story.append(Paragraph("BantayKalusugan Patient Vital Records", styles["PatientVitalsTitle"]))
+    story.append(Paragraph(f"Patient: {patient_name}", styles["PatientVitalsMeta"]))
+    story.append(Paragraph(f"Email: {patient.email}", styles["PatientVitalsMeta"]))
+    story.append(
+        Paragraph(
+            f"Date Start: {date_start.isoformat() if date_start else 'All'}",
+            styles["PatientVitalsMeta"],
+        )
+    )
+    story.append(
+        Paragraph(
+            f"Date End: {date_end.isoformat() if date_end else 'All'}",
+            styles["PatientVitalsMeta"],
+        )
+    )
+    story.append(Paragraph(f"Generated On: {date.today().isoformat()}", styles["PatientVitalsMeta"]))
+    story.append(Spacer(1, 0.2 * inch))
+
+    story.append(Paragraph("Vital History", styles["PatientVitalsSection"]))
+
+    table_rows = [
+        [
+            "Date",
+            "Time",
+            "BP",
+            "HR",
+            "Temp",
+            "SpO2",
+            "RR",
+            "Weight",
+            "Height",
+            "Recorded By",
+        ]
+    ]
+
+    if vitals:
+        for vital in vitals:
+            table_rows.append(
+                [
+                    vital.date,
+                    vital.time,
+                    f"{vital.systolic}/{vital.diastolic}",
+                    vital.heart_rate,
+                    vital.temperature,
+                    vital.spo2,
+                    vital.respiratory_rate,
+                    vital.weight,
+                    vital.height,
+                    vital.recorded_by,
+                ]
+            )
+    else:
+        table_rows.append([
+            "No vital records found for the selected range.",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ])
+
+    story.append(
+        _build_pdf_table(
+            table_rows,
+            col_widths=[
+                0.8 * inch,
+                0.6 * inch,
+                0.65 * inch,
+                0.5 * inch,
+                0.55 * inch,
+                0.5 * inch,
+                0.45 * inch,
+                0.6 * inch,
+                0.6 * inch,
+                1.25 * inch,
+            ],
+        )
+    )
+
+    document.build(story)
+    return output.getvalue()
+
 def delete_vital_sign(db: Session, vital_id: int, admin_id: int):
     vital = db.query(models.VitalSign).filter(models.VitalSign.id == vital_id).first()
     if vital:
