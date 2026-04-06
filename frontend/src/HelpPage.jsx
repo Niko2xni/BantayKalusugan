@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from './Layout.jsx';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -9,14 +9,14 @@ const AccordionItem = ({ title, subtitle, content }) => {
 
   return (
     <div className={styles.card} style={{ padding: '0', overflow: 'hidden', marginBottom: '16px', border: isOpen ? '1px solid var(--navy)' : '1px solid rgba(0, 0, 0, 0.04)', transition: 'all 0.2s ease', position: 'relative' }}>
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
-        style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          width: '100%', 
-          padding: '20px 24px', 
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          width: '100%',
+          padding: '20px 24px',
           background: isOpen ? 'rgba(46, 88, 149, 0.03)' : 'transparent',
           border: 'none',
           cursor: 'pointer',
@@ -26,7 +26,7 @@ const AccordionItem = ({ title, subtitle, content }) => {
       >
         <div>
           <h4 style={{ margin: '0', fontSize: '1.1rem', color: 'var(--text-dark)', fontWeight: '700' }}>{title}</h4>
-          <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: 'var(--navy)', fontWeight: '600' }}>Best for: <span style={{color: 'var(--text-mid)', fontWeight: '400'}}>{subtitle}</span></p>
+          <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: 'var(--navy)', fontWeight: '600' }}>Best for: <span style={{ color: 'var(--text-mid)', fontWeight: '400' }}>{subtitle}</span></p>
         </div>
         <div style={{ color: isOpen ? 'var(--navy)' : 'var(--text-mute)', background: isOpen ? 'rgba(46, 88, 149, 0.1)' : 'rgba(0,0,0,0.04)', borderRadius: '50%', padding: '6px', display: 'flex' }}>
           {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -45,7 +45,7 @@ const AccordionItem = ({ title, subtitle, content }) => {
 
 const HelpPage = () => {
   const linkStyle = { color: 'var(--navy)', fontWeight: '600' };
-  
+
   const faqItems = [
     {
       title: "Getting Started",
@@ -73,7 +73,7 @@ const HelpPage = () => {
     <Layout
       heroLabel="Help"
       heroTitle={<>Need help?</>}
-      heroDesc="Find quick guides on how to use the system." 
+      heroDesc="Find quick guides on how to use the system."
     >
       <section className={`${styles.section} ${styles['section--white']}`}>
         <div className={styles['subsection-header']} style={{ maxWidth: '1200px', margin: '0 auto 24px' }}>
@@ -83,12 +83,12 @@ const HelpPage = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '32px', alignItems: 'start', maxWidth: '1200px', margin: '0 auto' }}>
           <div>
             {faqItems.slice(0, 2).map((item, index) => (
-               <AccordionItem key={index} title={item.title} subtitle={item.subtitle} content={item.content} />
+              <AccordionItem key={index} title={item.title} subtitle={item.subtitle} content={item.content} />
             ))}
           </div>
           <div>
             {faqItems.slice(2, 4).map((item, index) => (
-               <AccordionItem key={index + 2} title={item.title} subtitle={item.subtitle} content={item.content} />
+              <AccordionItem key={index + 2} title={item.title} subtitle={item.subtitle} content={item.content} />
             ))}
           </div>
         </div>

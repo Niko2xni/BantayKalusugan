@@ -43,16 +43,16 @@ const Header = () => {
       </div>
       <div className={styles.navbar__menu}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginRight: '16px' }}>
-          
+
           <div className={styles['notifications-wrapper']} ref={dropdownRef}>
-            <button 
+            <button
               className={`${styles['top-header__btn']} ${styles['top-header__btn--icon']}`}
               onClick={() => setShowNotifications(!showNotifications)}
             >
               <Bell size={20} color="#4b5563" />
               {unreadCount > 0 && <span className={styles['notification-badge']}>{unreadCount}</span>}
             </button>
-            
+
             {showNotifications && (
               <div className={styles['notifications-dropdown']}>
                 <div className={styles['notifications-header']}>

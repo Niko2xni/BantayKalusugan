@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Download } from 'lucide-react';
 import Layout from './Layout.jsx';
@@ -101,7 +101,7 @@ const AnalyticsPage = () => {
 
   const getVitalTag = (type, value) => {
     let status = 'Normal';
-    
+
     if (type === 'bloodPressure') {
       const [sys, dia] = value.split('/').map(Number);
       if (sys >= 140 || dia >= 90) status = 'Abnormal';
@@ -139,12 +139,12 @@ const AnalyticsPage = () => {
     }
 
     return (
-      <span style={{ 
-        backgroundColor: bgColor, 
-        color: color, 
-        padding: '4px 10px', 
-        borderRadius: '20px', 
-        fontSize: '0.85rem', 
+      <span style={{
+        backgroundColor: bgColor,
+        color: color,
+        padding: '4px 10px',
+        borderRadius: '20px',
+        fontSize: '0.85rem',
         fontWeight: '600',
         display: 'inline-block'
       }}>
@@ -226,54 +226,54 @@ const AnalyticsPage = () => {
           </div>
         </div>
 
-          {/* SEARCH FILTERS */}
-          <div className={styles['search-filters']}>
-            <div className={styles['search-field']}>
-              <Search size={16} />
-              <input
-                type="date"
-                name="date"
-                placeholder="Filter by date"
-                value={vitalFilters.date}
-                onChange={handleVitalFilterChange}
-              />
-            </div>
-
+        {/* SEARCH FILTERS */}
+        <div className={styles['search-filters']}>
+          <div className={styles['search-field']}>
+            <Search size={16} />
+            <input
+              type="date"
+              name="date"
+              placeholder="Filter by date"
+              value={vitalFilters.date}
+              onChange={handleVitalFilterChange}
+            />
           </div>
 
-          <div className={styles['table-wrapper']}>
-            <table className={styles['vitals-table']}>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Blood Pressure</th>
-                  <th>Heart Rate</th>
-                  <th>Temperature</th>
-                  <th>SpO2</th>
-                  <th>Resp. Rate</th>
-                  <th>BMI</th>
-                  <th>Visit Type</th>
-                  <th>Staff Name</th>
+        </div>
+
+        <div className={styles['table-wrapper']}>
+          <table className={styles['vitals-table']}>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Blood Pressure</th>
+                <th>Heart Rate</th>
+                <th>Temperature</th>
+                <th>SpO2</th>
+                <th>Resp. Rate</th>
+                <th>BMI</th>
+                <th>Visit Type</th>
+                <th>Staff Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredVitals.map((vital, idx) => (
+                <tr key={idx}>
+                  <td>{vital.date}</td>
+                  <td>{getVitalTag('bloodPressure', vital.bloodPressure)}</td>
+                  <td>{getVitalTag('heartRate', vital.heartRate)}</td>
+                  <td>{getVitalTag('temperature', vital.temperature)}</td>
+                  <td>{getVitalTag('spO2', vital.spO2)}</td>
+                  <td>{getVitalTag('respRate', vital.respRate)}</td>
+                  <td>{getVitalTag('bmi', vital.bmi)}</td>
+                  <td>{vital.visitType}</td>
+                  <td>{vital.staffName}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredVitals.map((vital, idx) => (
-                  <tr key={idx}>
-                    <td>{vital.date}</td>
-                    <td>{getVitalTag('bloodPressure', vital.bloodPressure)}</td>
-                    <td>{getVitalTag('heartRate', vital.heartRate)}</td>
-                    <td>{getVitalTag('temperature', vital.temperature)}</td>
-                    <td>{getVitalTag('spO2', vital.spO2)}</td>
-                    <td>{getVitalTag('respRate', vital.respRate)}</td>
-                    <td>{getVitalTag('bmi', vital.bmi)}</td>
-                    <td>{vital.visitType}</td>
-                    <td>{vital.staffName}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </Layout>
   );
 };
