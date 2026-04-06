@@ -50,7 +50,7 @@ const Header = () => {
               onClick={() => setShowNotifications(!showNotifications)}
             >
               <Bell size={20} color="#4b5563" />
-              {unreadCount > 0 && <span className={styles['notification-badge']}>{unreadCount}</span>}
+              {unreadCount > 0 && <span className={styles['notifications-badge']}>{unreadCount}</span>}
             </button>
 
             {showNotifications && (
