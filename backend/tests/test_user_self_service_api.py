@@ -384,6 +384,157 @@ def test_patient_chat_messages_and_help_articles(client, user_factory):
     assert len(payload["items"]) >= 4
 
 
+def test_patient_chat_schedule_reply_is_human_readable_and_mentions_unread_notifications(
+    client,
+    db_session,
+    user_factory,
+):
+    patient = user_factory(email="phase5.schedule.chat@example.com", role="patient")
+
+    next_appointment = crud.request_patient_appointment(
+        db_session,
+        patient,
+        schemas.AppointmentRequestCreate(
+            appointment_type="General Consultation",
+            health_area="General",
+            scheduled_at=datetime(2026, 6, 8, 8, 30, tzinfo=UTC),
+            location="Barangay Health Center",
+            notes="Schedule check",
+        ),
+    )
+    next_appointment.status = "Confirmed"
+
+    crud._create_notification(
+        db_session,
+        user_id=patient.id,
+        title="Status Update",
+        body="Your request was reviewed.",
+        kind="appointment",
+    )
+    db_session.commit()
+
+    response = client.post(
+        "/api/me/chat/messages",
+        headers=_auth_headers(patient),
+        json={
+            "message": "When is my next appointment?",
+            "channel": "support",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    bot_reply = payload[1]["message"]
+    assert "Your next appointment is General Consultation" in bot_reply
+    assert "Its current status is Confirmed." in bot_reply
+    assert "unread notifications" in bot_reply
+
+
+def test_patient_chat_confirmation_reply_summarizes_pending_and_confirmed(
+    client,
+    db_session,
+    user_factory,
+):
+    patient = user_factory(email="phase5.confirmation.chat@example.com", role="patient")
+
+    confirmed = crud.request_patient_appointment(
+        db_session,
+        patient,
+        schemas.AppointmentRequestCreate(
+            appointment_type="Prenatal Checkup",
+            health_area="Maternal",
+            scheduled_at=datetime(2026, 6, 9, 9, 0, tzinfo=UTC),
+            location="RHU Building",
+            notes="Confirmation query",
+        ),
+    )
+    confirmed.status = "Confirmed"
+
+    crud.request_patient_appointment(
+        db_session,
+        patient,
+        schemas.AppointmentRequestCreate(
+            appointment_type="Follow-up",
+            health_area="General",
+            scheduled_at=datetime(2026, 6, 11, 11, 0, tzinfo=UTC),
+            location="Barangay Health Center",
+            notes="Still pending",
+        ),
+    )
+    db_session.commit()
+
+    response = client.post(
+        "/api/me/chat/messages",
+        headers=_auth_headers(patient),
+        json={
+            "message": "Is my appointment confirmed?",
+            "channel": "support",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    bot_reply = payload[1]["message"]
+    assert "Confirmed appointments: 1." in bot_reply
+    assert "Pending appointments: 1." in bot_reply
+    assert "waiting for staff confirmation" in bot_reply
+
+
+def test_patient_chat_schedule_reply_handles_no_appointments(client, user_factory):
+    patient = user_factory(email="phase5.no.appointments@example.com", role="patient")
+
+    response = client.post(
+        "/api/me/chat/messages",
+        headers=_auth_headers(patient),
+        json={
+            "message": "Can you tell me my schedule?",
+            "channel": "support",
+        },
+    )
+
+    assert response.status_code == 200
+    bot_reply = response.json()[1]["message"]
+    assert "I could not find any upcoming pending or confirmed appointments" in bot_reply
+    assert "request one from the Schedules page" in bot_reply
+
+
+def test_patient_chat_reschedule_cancel_guidance_reply(client, user_factory):
+    patient = user_factory(email="phase5.reschedule.chat@example.com", role="patient")
+
+    response = client.post(
+        "/api/me/chat/messages",
+        headers=_auth_headers(patient),
+        json={
+            "message": "How do I reschedule or cancel my appointment?",
+            "channel": "support",
+        },
+    )
+
+    assert response.status_code == 200
+    bot_reply = response.json()[1]["message"]
+    assert "To reschedule or cancel, open the Schedules page" in bot_reply
+    assert "Rescheduled requests return to Pending" in bot_reply
+
+
+def test_patient_chat_fallback_reply_stays_text_only(client, user_factory):
+    patient = user_factory(email="phase5.fallback.chat@example.com", role="patient")
+
+    response = client.post(
+        "/api/me/chat/messages",
+        headers=_auth_headers(patient),
+        json={
+            "message": "Can you tell me a joke?",
+            "channel": "support",
+        },
+    )
+
+    assert response.status_code == 200
+    bot_reply = response.json()[1]["message"]
+    assert "I can currently help with appointment schedules and confirmation concerns" in bot_reply
+    assert "http://" not in bot_reply
+    assert "https://" not in bot_reply
+
+
 def test_phase4_5_endpoints_require_auth(client):
     response = client.get("/api/me/appointments")
     assert response.status_code == 401

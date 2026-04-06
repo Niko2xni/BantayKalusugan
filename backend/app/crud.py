@@ -478,17 +478,213 @@ def get_chat_messages(
     )
 
 
-def _build_bot_reply(message: str) -> str:
-    lower_msg = message.lower()
-    if "appointment" in lower_msg or "schedule" in lower_msg:
-        return "For appointments, use the Schedules page to request, cancel, or reschedule, and check status updates there."
-    if "vital" in lower_msg or "bp" in lower_msg or "blood pressure" in lower_msg:
-        return "You can review your latest trends and complete vital history in Dashboard and Analytics."
-    if "help" in lower_msg or "support" in lower_msg:
-        return "I can answer common workflow questions. If this is urgent, please contact your barangay health center directly."
-    if "hello" in lower_msg or "hi" in lower_msg:
-        return "Hello. How can I assist you with your health portal today?"
-    return "Thanks for your message. I have noted this and can help with appointments, vitals, and account usage questions."
+def _normalize_chat_message_text(message: str) -> str:
+    return " ".join(message.lower().strip().split())
+
+
+def _contains_any_keyword(message: str, keywords: tuple[str, ...]) -> bool:
+    return any(keyword in message for keyword in keywords)
+
+
+def _count_unread_notifications(db: Session, user_id: int) -> int:
+    unread_count = (
+        db.query(func.count(models.Notification.id))
+        .filter(models.Notification.user_id == user_id, models.Notification.is_read.is_(False))
+        .scalar()
+    )
+    return int(unread_count or 0)
+
+
+def _format_chat_datetime(timestamp: datetime) -> str:
+    normalized = timestamp if timestamp.tzinfo else timestamp.replace(tzinfo=UTC)
+    return normalized.astimezone(UTC).strftime("%b %d, %Y at %I:%M %p UTC")
+
+
+def _append_unread_notification_note(message: str, unread_count: int) -> str:
+    if unread_count <= 0:
+        return message
+
+    noun = "notification" if unread_count == 1 else "notifications"
+    return f"{message} You currently have {unread_count} unread {noun} that may include appointment updates."
+
+
+def _classify_support_intent(message: str) -> str:
+    normalized = _normalize_chat_message_text(message)
+    has_appointment_context = _contains_any_keyword(
+        normalized,
+        (
+            "appointment",
+            "appointments",
+            "schedule",
+            "scheduled",
+            "booking",
+            "book",
+            "confirm",
+            "confirmation",
+        ),
+    )
+
+    if _contains_any_keyword(
+        normalized,
+        ("escalate", "staff member", "health staff", "human agent", "real person"),
+    ):
+        return "escalation"
+
+    if has_appointment_context and _contains_any_keyword(
+        normalized,
+        ("reschedule", "re-schedule", "cancel", "cancellation", "move", "change schedule"),
+    ):
+        return "reschedule_cancel_guidance"
+
+    if has_appointment_context and _contains_any_keyword(
+        normalized,
+        ("confirmed", "confirm", "confirmation", "pending", "status"),
+    ):
+        return "confirmation_lookup"
+
+    if has_appointment_context and _contains_any_keyword(
+        normalized,
+        ("when", "next", "date", "time", "schedule", "scheduled"),
+    ):
+        return "schedule_lookup"
+
+    if has_appointment_context and _contains_any_keyword(
+        normalized,
+        ("request", "book", "create", "set", "new appointment"),
+    ):
+        return "request_guidance"
+
+    if _contains_any_keyword(
+        normalized,
+        ("hello", "hi", "good morning", "good afternoon", "good evening"),
+    ):
+        return "greeting"
+
+    return "fallback"
+
+
+def _build_schedule_lookup_reply(appointments: list[models.Appointment], unread_count: int) -> str:
+    active_appointments = [item for item in appointments if item.status in {"Pending", "Confirmed"}]
+    if not active_appointments:
+        return _append_unread_notification_note(
+            "I could not find any upcoming pending or confirmed appointments on your account yet. You can request one from the Schedules page.",
+            unread_count,
+        )
+
+    next_appointment = active_appointments[0]
+    location = next_appointment.location or "Barangay Health Center"
+    reply = (
+        f"Your next appointment is {next_appointment.appointment_type} on "
+        f"{_format_chat_datetime(next_appointment.scheduled_at)} at {location}. "
+        f"Its current status is {next_appointment.status}."
+    )
+
+    additional_count = len(active_appointments) - 1
+    if additional_count > 0:
+        noun = "appointment" if additional_count == 1 else "appointments"
+        reply = f"{reply} You also have {additional_count} other active {noun}."
+
+    return _append_unread_notification_note(reply, unread_count)
+
+
+def _build_confirmation_lookup_reply(appointments: list[models.Appointment], unread_count: int) -> str:
+    pending_appointments = [item for item in appointments if item.status == "Pending"]
+    confirmed_appointments = [item for item in appointments if item.status == "Confirmed"]
+
+    if not pending_appointments and not confirmed_appointments:
+        return _append_unread_notification_note(
+            "You currently do not have pending or confirmed appointments. If you need a visit, open Schedules and submit a new request.",
+            unread_count,
+        )
+
+    details: list[str] = []
+    if confirmed_appointments:
+        next_confirmed = confirmed_appointments[0]
+        location = next_confirmed.location or "Barangay Health Center"
+        details.append(
+            f"Confirmed appointments: {len(confirmed_appointments)}. "
+            f"Next confirmed visit is {next_confirmed.appointment_type} on "
+            f"{_format_chat_datetime(next_confirmed.scheduled_at)} at {location}."
+        )
+    else:
+        details.append("Confirmed appointments: 0.")
+
+    if pending_appointments:
+        details.append(
+            f"Pending appointments: {len(pending_appointments)}. "
+            "Pending requests are still waiting for staff confirmation."
+        )
+    else:
+        details.append("Pending appointments: 0.")
+
+    return _append_unread_notification_note(" ".join(details), unread_count)
+
+
+def _build_reschedule_cancel_guidance_reply(unread_count: int) -> str:
+    reply = (
+        "To reschedule or cancel, open the Schedules page, choose your appointment card, "
+        "then select Reschedule or Cancel. Rescheduled requests return to Pending until staff confirms the new time."
+    )
+    return _append_unread_notification_note(reply, unread_count)
+
+
+def _build_request_guidance_reply(unread_count: int) -> str:
+    reply = (
+        "To request a new appointment, open the Schedules page and submit the Request Appointment form "
+        "with the type, health area, date and time, and location."
+    )
+    return _append_unread_notification_note(reply, unread_count)
+
+
+def _build_greeting_reply(unread_count: int) -> str:
+    reply = (
+        "Hello. I can help with appointment schedules and confirmation concerns. "
+        "Ask me about your next appointment, confirmation status, rescheduling, or cancellation."
+    )
+    return _append_unread_notification_note(reply, unread_count)
+
+
+def _build_fallback_reply(unread_count: int) -> str:
+    reply = (
+        "I can currently help with appointment schedules and confirmation concerns. "
+        "Please ask about your next appointment, whether a request is confirmed, or how to request, reschedule, or cancel."
+    )
+    return _append_unread_notification_note(reply, unread_count)
+
+
+def _build_escalation_reply() -> str:
+    return (
+        "I have noted your escalation request. A health staff member should review this concern. "
+        "For urgent issues, please contact your barangay health center directly."
+    )
+
+
+def _build_bot_reply(
+    db: Session,
+    user_id: int,
+    message: str,
+    channel: str = "support",
+) -> str:
+    if channel != "support":
+        return "Please continue in the support channel for appointment schedule and confirmation concerns."
+
+    intent = _classify_support_intent(message)
+    unread_count = _count_unread_notifications(db, user_id)
+    appointments = get_patient_appointments(db, patient_id=user_id)
+
+    if intent == "escalation":
+        return _build_escalation_reply()
+    if intent == "schedule_lookup":
+        return _build_schedule_lookup_reply(appointments, unread_count)
+    if intent == "confirmation_lookup":
+        return _build_confirmation_lookup_reply(appointments, unread_count)
+    if intent == "reschedule_cancel_guidance":
+        return _build_reschedule_cancel_guidance_reply(unread_count)
+    if intent == "request_guidance":
+        return _build_request_guidance_reply(unread_count)
+    if intent == "greeting":
+        return _build_greeting_reply(unread_count)
+    return _build_fallback_reply(unread_count)
 
 
 def create_chat_message_with_reply(
@@ -512,7 +708,7 @@ def create_chat_message_with_reply(
     bot_message = models.ChatMessage(
         user_id=user_id,
         sender_type="bot",
-        message=_build_bot_reply(message_text),
+        message=_build_bot_reply(db, user_id=user_id, message=message_text, channel=payload.channel),
         channel=payload.channel,
     )
     db.add(bot_message)
