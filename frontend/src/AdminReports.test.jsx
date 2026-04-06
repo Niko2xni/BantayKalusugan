@@ -10,6 +10,10 @@ vi.mock("./components/AdminSidebar", () => ({
   default: () => <div>Admin Sidebar Mock</div>,
 }));
 
+vi.mock("./components/admin-dashboard/AdminNotificationsDropdown", () => ({
+  default: () => <div>Admin Notifications Mock</div>,
+}));
+
 vi.mock("./utils/adminApi", () => ({
   AUTH_REDIRECT_ERROR: "AUTH_REDIRECT_ERROR",
   adminFetch: vi.fn(),

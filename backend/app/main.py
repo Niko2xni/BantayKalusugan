@@ -303,6 +303,40 @@ def mark_current_patient_notifications_read_all(
     return {"message": f"Marked {count} notifications as read"}
 
 
+@app.get("/api/admin/notifications", response_model=List[schemas.Notification])
+def read_admin_notifications(
+    only_unread: bool = False,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    return crud.get_patient_notifications(
+        db,
+        user_id=current_admin.id,
+        only_unread=only_unread,
+    )
+
+
+@app.patch("/api/admin/notifications/{notification_id}/read", response_model=schemas.Notification)
+def mark_admin_notification_read(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    try:
+        return crud.mark_notification_as_read(db, current_admin.id, notification_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@app.patch("/api/admin/notifications/read-all", response_model=schemas.MessageResponse)
+def mark_admin_notifications_read_all(
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    count = crud.mark_all_notifications_as_read(db, current_admin.id)
+    return {"message": f"Marked {count} notifications as read"}
+
+
 @app.get("/api/me/chat/messages", response_model=List[schemas.ChatMessage])
 def read_current_patient_chat_messages(
     channel: str = "support",

@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import "./AdminDashboard.css";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminProfileLink from "./components/AdminProfileLink";
+import AdminNotificationsDropdown from "./components/admin-dashboard/AdminNotificationsDropdown";
 import { adminFetch, AUTH_REDIRECT_ERROR } from "./utils/adminApi";
 import {
     Users,
     Activity,
     FileText,
-    Bell,
     Download,
     BarChart3,
     FileBarChart,
@@ -235,10 +235,7 @@ export default function AdminReports() {
                         <p className="topbar-subtitle">Generate and view health monitoring reports</p>
                     </div>
                     <div className="topbar-right">
-                        <button className="topbar-bell-btn">
-                            <Bell size={20} />
-                            <span className="bell-dot" />
-                        </button>
+                        <AdminNotificationsDropdown />
                         <AdminProfileLink />
                     </div>
                 </header>

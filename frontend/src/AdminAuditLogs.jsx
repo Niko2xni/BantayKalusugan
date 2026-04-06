@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./AdminDashboard.css";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminProfileLink from "./components/AdminProfileLink";
+import AdminNotificationsDropdown from "./components/admin-dashboard/AdminNotificationsDropdown";
 import { adminFetch, AUTH_REDIRECT_ERROR } from "./utils/adminApi";
 import {
   Search,
@@ -9,7 +10,6 @@ import {
   Clock,
   Download,
   Eye,
-  Bell,
 } from "lucide-react";
 
 function ActionBadge({ action }) {
@@ -214,10 +214,7 @@ export default function AdminAuditLogs() {
               <Download size={16} />
               Export CSV
             </button>
-            <button className="topbar-bell-btn">
-              <Bell size={20} />
-              <span className="bell-dot" />
-            </button>
+            <AdminNotificationsDropdown />
             <AdminProfileLink />
           </div>
         </header>

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Bell } from "lucide-react";
 
 import "./AdminDashboard.css";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminProfileLink from "./components/AdminProfileLink";
+import AdminNotificationsDropdown from "./components/admin-dashboard/AdminNotificationsDropdown";
 import AdminToast from "./components/admin-dashboard/AdminToast";
 import DeleteConfirmModal from "./components/admin-dashboard/DeleteConfirmModal";
 import OverviewPanel from "./components/admin-dashboard/OverviewPanel";
@@ -307,10 +307,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <div className="topbar-right">
-            <button className="topbar-bell-btn" type="button">
-              <Bell size={18} />
-              <span className="bell-dot" />
-            </button>
+            <AdminNotificationsDropdown />
             <AdminProfileLink />
           </div>
         </header>

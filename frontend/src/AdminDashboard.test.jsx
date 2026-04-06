@@ -120,6 +120,10 @@ vi.mock("./components/admin-dashboard/AdminToast", () => ({
   default: () => null,
 }));
 
+vi.mock("./components/admin-dashboard/AdminNotificationsDropdown", () => ({
+  default: () => <div>Admin Notifications Mock</div>,
+}));
+
 function renderDashboard(initialEntry = "/admin") {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>

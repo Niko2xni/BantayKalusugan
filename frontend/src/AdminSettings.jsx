@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import "./AdminDashboard.css";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminProfileLink from "./components/AdminProfileLink";
+import AdminNotificationsDropdown from "./components/admin-dashboard/AdminNotificationsDropdown";
 import { adminFetch, AUTH_REDIRECT_ERROR } from "./utils/adminApi";
 import { getStoredUser, setStoredUser } from "./utils/authSession";
 import {
-    Bell,
     Save,
     User,
     Lock,
@@ -328,10 +328,7 @@ export default function AdminSettings() {
                         <p className="topbar-subtitle">Manage your system preferences and configurations</p>
                     </div>
                     <div className="topbar-right">
-                        <button className="topbar-bell-btn">
-                            <Bell size={20} />
-                            <span className="bell-dot" />
-                        </button>
+                        <AdminNotificationsDropdown />
                         <AdminProfileLink name={profileData.name} role={profileData.role} />
                     </div>
                 </header>
