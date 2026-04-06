@@ -147,23 +147,10 @@ ul  { list-style: none; }
 .navbar__logo-icon {
   width: 30px;
   height: 30px;
-  border: 2.5px solid var(--navy);
-  position: relative;
+  display: block;
   flex-shrink: 0;
+  object-fit: contain;
 }
-
-.navbar__logo-icon::before,
-.navbar__logo-icon::after {
-  content: '';
-  position: absolute;
-  background-color: var(--navy);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.navbar__logo-icon::before { width: 2px; height: 55%; }
-.navbar__logo-icon::after  { width: 55%; height: 2px; }
 
 .navbar__links {
   display: flex;

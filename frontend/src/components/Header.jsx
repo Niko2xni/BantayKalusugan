@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown } from 'lucide-react';
+import logo from '../assets/logo.png';
 import styles from '../user_dashboard.module.css';
 import { clearAuthSession, getStoredUser } from '../utils/authSession';
 import {
@@ -131,7 +132,7 @@ const Header = () => {
   return (
     <nav className={styles.navbar}>
       <div className={styles.navbar__logo}>
-        <div className={styles['navbar__logo-icon']}></div>
+        <img className={styles['navbar__logo-icon']} src={logo} alt="BantayKalusugan Logo" />
         <span>BantayKalusugan</span>
       </div>
       <div className={styles.navbar__menu}>
