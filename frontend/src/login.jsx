@@ -2,7 +2,7 @@ import styles from './login.module.css';
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, MapPin, Phone, Facebook, Twitter, Instagram, Menu, X } from "lucide-react";
-import { clearAuthSession } from "./utils/authSession";
+import { clearAuthSession, setStoredUser } from "./utils/authSession";
 
 import logo from "./assets/logo.svg";
 
@@ -130,7 +130,7 @@ export default function Login() {
 
       // Only navigate if we got a valid user back
       if (data.user && data.access_token) {
-        localStorage.setItem("user", JSON.stringify(data.user));
+        setStoredUser(data.user);
         localStorage.setItem("token", data.access_token);
 
         // Route based on user role from the database

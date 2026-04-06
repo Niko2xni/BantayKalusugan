@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import AdminDashboard from "./AdminDashboard";
 
@@ -125,16 +125,30 @@ function renderDashboard(initialEntry = "/admin") {
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/settings" element={<div>Admin Settings Page</div>} />
       </Routes>
     </MemoryRouter>
   );
 }
 
 describe("AdminDashboard", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        first_name: "Aida",
+        last_name: "Reyes",
+        role: "admin",
+      })
+    );
+  });
+
   it("renders overview panel by default", () => {
     renderDashboard();
 
     expect(screen.getByText("Overview Panel Mock")).toBeInTheDocument();
+    expect(screen.getByText("Aida Reyes")).toBeInTheDocument();
   });
 
   it("switches to patients panel from overview action", async () => {
@@ -150,5 +164,14 @@ describe("AdminDashboard", () => {
     renderDashboard({ pathname: "/admin", state: { tab: "records" } });
 
     expect(screen.getByText("Vitals Panel Mock")).toBeInTheDocument();
+  });
+
+  it("navigates to admin settings from the profile link", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    await user.click(screen.getByRole("link", { name: "Admin Profile" }));
+
+    expect(screen.getByText("Admin Settings Page")).toBeInTheDocument();
   });
 });

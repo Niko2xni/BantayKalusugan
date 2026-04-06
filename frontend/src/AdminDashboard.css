@@ -237,6 +237,9 @@ body {
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 9999px;
 }
 
 .topbar-avatar-circle {

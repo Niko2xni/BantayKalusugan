@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Bell, ChevronDown } from "lucide-react";
+import { Bell } from "lucide-react";
 
 import "./AdminDashboard.css";
 import AdminSidebar from "./components/AdminSidebar";
+import AdminProfileLink from "./components/AdminProfileLink";
 import AdminToast from "./components/admin-dashboard/AdminToast";
 import DeleteConfirmModal from "./components/admin-dashboard/DeleteConfirmModal";
 import OverviewPanel from "./components/admin-dashboard/OverviewPanel";
@@ -310,13 +311,7 @@ export default function AdminDashboard() {
               <Bell size={18} />
               <span className="bell-dot" />
             </button>
-            <div className="topbar-avatar">
-              <div className="topbar-avatar-circle">A</div>
-              <div className="topbar-avatar-info">
-                <span className="topbar-avatar-name">Admin</span>
-              </div>
-              <ChevronDown size={14} style={{ color: "#888" }} />
-            </div>
+            <AdminProfileLink />
           </div>
         </header>
 

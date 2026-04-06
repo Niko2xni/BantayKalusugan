@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import "./AdminDashboard.css";
 import AdminSidebar from "./components/AdminSidebar";
+import AdminProfileLink from "./components/AdminProfileLink";
 import { adminFetch, AUTH_REDIRECT_ERROR } from "./utils/adminApi";
+import { getStoredUser, setStoredUser } from "./utils/authSession";
 import {
     Bell,
-    ChevronDown,
     Save,
     User,
     Lock,
@@ -164,6 +165,20 @@ export default function AdminSettings() {
                 role: updated.role,
             });
             showNotification("Profile settings saved successfully!");
+
+            const storedUser = getStoredUser() || {};
+            const nameParts = String(updated.name || "").trim().split(/\s+/).filter(Boolean);
+            const firstName = nameParts[0] || storedUser.first_name || "Admin";
+            const lastName = nameParts.slice(1).join(" ") || storedUser.last_name || "Staff";
+
+            setStoredUser({
+                ...storedUser,
+                first_name: firstName,
+                last_name: lastName,
+                email: updated.email,
+                phone: updated.phone,
+                role: storedUser.role || "admin",
+            });
         } catch (err) {
             if (err.message !== AUTH_REDIRECT_ERROR) {
                 showNotification(err.message || "Failed to save profile settings", "error");
@@ -317,16 +332,7 @@ export default function AdminSettings() {
                             <Bell size={20} />
                             <span className="bell-dot" />
                         </button>
-                        <div className="topbar-avatar">
-                            <div className="topbar-avatar-circle">
-                                AS
-                            </div>
-                            <div className="topbar-avatar-info">
-                                <span className="topbar-avatar-name">Admin Staff</span>
-                                <span style={{ fontSize: "0.75rem", color: "#888" }}>Administrator</span>
-                            </div>
-                            <ChevronDown size={16} style={{ color: "#888", marginLeft: "0.25rem" }} />
-                        </div>
+                        <AdminProfileLink name={profileData.name} role={profileData.role} />
                     </div>
                 </header>
 

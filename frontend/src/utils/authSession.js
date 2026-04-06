@@ -3,6 +3,10 @@ export function clearAuthSession() {
   localStorage.removeItem("token");
 }
 
+export function setStoredUser(user) {
+  localStorage.setItem("user", JSON.stringify(user));
+}
+
 export function getStoredUser() {
   const rawUser = localStorage.getItem("user");
   if (!rawUser) {

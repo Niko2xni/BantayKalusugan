@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./AdminDashboard.css";
 import AdminSidebar from "./components/AdminSidebar";
+import AdminProfileLink from "./components/AdminProfileLink";
 import { adminFetch, AUTH_REDIRECT_ERROR } from "./utils/adminApi";
 import {
   Search,
@@ -9,7 +10,6 @@ import {
   Download,
   Eye,
   Bell,
-  ChevronDown,
 } from "lucide-react";
 
 function ActionBadge({ action }) {
@@ -218,14 +218,7 @@ export default function AdminAuditLogs() {
               <Bell size={20} />
               <span className="bell-dot" />
             </button>
-            <div className="topbar-avatar">
-              <div className="topbar-avatar-circle">AS</div>
-              <div className="topbar-avatar-info">
-                <span className="topbar-avatar-name">Admin Staff</span>
-                <span style={{ fontSize: "0.75rem", color: "#888" }}>Administrator</span>
-              </div>
-              <ChevronDown size={16} style={{ color: "#888", marginLeft: "0.25rem" }} />
-            </div>
+            <AdminProfileLink />
           </div>
         </header>
 
