@@ -36,6 +36,26 @@ const CONDITION_COLORS = {
     "High Risk": "#C23B21",
     "Under Monitoring": "#F7E976",
 };
+
+const REPORT_TYPE_CONFIG = {
+    overview: {
+        label: "Overview Report",
+        description: "High-level snapshot of patient volume, vital signs, and condition trends.",
+    },
+    patients: {
+        label: "Patient Statistics",
+        description: "Focuses on patient volume, registration activity, and age mix.",
+    },
+    vitals: {
+        label: "Vital Signs Analysis",
+        description: "Focuses on blood pressure measurements and trends over time.",
+    },
+    conditions: {
+        label: "Health Conditions",
+        description: "Focuses on condition prevalence and the spread across age groups.",
+    },
+};
+
 export default function AdminReports() {
     const [reportType, setReportType] = useState("overview");
     const [dateRange, setDateRange] = useState("thisMonth");
@@ -59,6 +79,8 @@ export default function AdminReports() {
     });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
+
+    const selectedReportConfig = REPORT_TYPE_CONFIG[reportType] ?? REPORT_TYPE_CONFIG.overview;
 
     useEffect(() => {
         let isCancelled = false;
@@ -111,6 +133,14 @@ export default function AdminReports() {
         return trends.monthly_summary || [];
     }, [trends]);
 
+    const bpTrends = useMemo(() => {
+        return trends.bp_trends || [];
+    }, [trends]);
+
+    const registrationTrends = useMemo(() => {
+        return trends.registrations || [];
+    }, [trends]);
+
     const conditionDistribution = useMemo(() => {
         return (distributions.health_conditions || []).map((item) => ({
             ...item,
@@ -121,6 +151,16 @@ export default function AdminReports() {
     const ageDistribution = useMemo(() => {
         return distributions.age_distribution || [];
     }, [distributions]);
+
+    const renderChartCard = (title, icon, content) => (
+        <div className="chart-card">
+            <div className="chart-card-header" style={{ marginBottom: "1rem" }}>
+                <h3 className="chart-card-title">{title}</h3>
+                {icon}
+            </div>
+            {content}
+        </div>
+    );
 
     const handleExportReport = async () => {
         setIsExporting(true);
@@ -264,6 +304,21 @@ export default function AdminReports() {
                                 {isExporting ? "Exporting..." : "Export Report"}
                             </button>
                         </div>
+
+                        <div
+                            style={{
+                                marginTop: "1rem",
+                                padding: "0.875rem 1rem",
+                                borderRadius: "0.75rem",
+                                backgroundColor: "#f6f9fc",
+                                color: "#4a5568",
+                                fontSize: "0.875rem",
+                                lineHeight: 1.5,
+                            }}
+                        >
+                            <strong style={{ color: "#2E5895" }}>{selectedReportConfig.label}:</strong>{" "}
+                            {selectedReportConfig.description}
+                        </div>
                     </div>
 
                     {/* Key Metrics */}
@@ -300,85 +355,93 @@ export default function AdminReports() {
 
                     {/* Charts Grid */}
                     <div className="charts-row" style={{ marginBottom: "1.5rem" }}>
-                        {/* Monthly Trends */}
-                        <div className="chart-card">
-                            <div className="chart-card-header" style={{ marginBottom: "1rem" }}>
-                                <h3 className="chart-card-title">Monthly Patient Trends</h3>
-                                <BarChart3 size={20} color="#888" />
-                            </div>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <BarChart data={monthlyReports}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#888" }} />
-                                    <YAxis tick={{ fontSize: 12, fill: "#888" }} />
-                                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
-                                    <Bar dataKey="patients" fill="#2E5895" radius={[8, 8, 0, 0]} name="Patients" />
-                                    <Bar dataKey="visits" fill="#FFC32B" radius={[8, 8, 0, 0]} name="Visits" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                        {(reportType === "overview" || reportType === "patients" || reportType === "vitals") &&
+                            renderChartCard(
+                                "Monthly Patient Trends",
+                                <BarChart3 size={20} color="#888" />,
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <BarChart data={monthlyReports}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#888" }} />
+                                        <YAxis tick={{ fontSize: 12, fill: "#888" }} />
+                                        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
+                                        <Bar dataKey="patients" fill="#2E5895" radius={[8, 8, 0, 0]} name="Patients" />
+                                        <Bar dataKey="visits" fill="#FFC32B" radius={[8, 8, 0, 0]} name="Visits" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
 
-                        {/* Health Condition Distribution */}
-                        <div className="chart-card">
-                            <div className="chart-card-header" style={{ marginBottom: "1rem" }}>
-                                <h3 className="chart-card-title">Health Condition Distribution</h3>
-                                <FileBarChart size={20} color="#888" />
-                            </div>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <PieChart>
-                                    <Pie
-                                        data={conditionDistribution}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                        outerRadius={80}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {conditionDistribution.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
+                        {reportType === "patients" &&
+                            renderChartCard(
+                                "Registration Trends",
+                                <Users size={20} color="#888" />,
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <BarChart data={registrationTrends}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#888" }} />
+                                        <YAxis tick={{ fontSize: 12, fill: "#888" }} />
+                                        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
+                                        <Bar dataKey="patients" fill="#2E5895" radius={[8, 8, 0, 0]} name="New Patients" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
 
-                        {/* Average BP Trends */}
-                        <div className="chart-card">
-                            <div className="chart-card-header" style={{ marginBottom: "1rem" }}>
-                                <h3 className="chart-card-title">Average Blood Pressure Trend</h3>
-                                <Activity size={20} color="#888" />
-                            </div>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <LineChart data={monthlyReports}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#888" }} />
-                                    <YAxis tick={{ fontSize: 12, fill: "#888" }} />
-                                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
-                                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                                    <Line type="monotone" dataKey="avg_bp" stroke="#C23B21" strokeWidth={2.5} dot={{ r: 5, fill: "#C23B21" }} name="Avg Systolic BP" />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
+                        {(reportType === "overview" || reportType === "conditions") &&
+                            renderChartCard(
+                                "Health Condition Distribution",
+                                <FileBarChart size={20} color="#888" />,
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <PieChart>
+                                        <Pie
+                                            data={conditionDistribution}
+                                            cx="50%"
+                                            cy="50%"
+                                            labelLine={false}
+                                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                            outerRadius={80}
+                                            fill="#8884d8"
+                                            dataKey="value"
+                                        >
+                                            {conditionDistribution.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
 
-                        {/* Age Distribution */}
-                        <div className="chart-card">
-                            <div className="chart-card-header" style={{ marginBottom: "1rem" }}>
-                                <h3 className="chart-card-title">Patient Age Distribution</h3>
-                                <Users size={20} color="#888" />
-                            </div>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <BarChart data={ageDistribution} layout="vertical">
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis type="number" tick={{ fontSize: 12, fill: "#888" }} />
-                                    <YAxis dataKey="range" type="category" tick={{ fontSize: 12, fill: "#888" }} />
-                                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
-                                    <Bar dataKey="count" fill="#FFC32B" radius={[0, 8, 8, 0]} name="Count" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                        {(reportType === "overview" || reportType === "vitals") &&
+                            renderChartCard(
+                                "Average Blood Pressure Trend",
+                                <Activity size={20} color="#888" />,
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <LineChart data={bpTrends}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#888" }} />
+                                        <YAxis tick={{ fontSize: 12, fill: "#888" }} />
+                                        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
+                                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                                        <Line type="monotone" dataKey="systolic" stroke="#C23B21" strokeWidth={2.5} dot={{ r: 5, fill: "#C23B21" }} name="Systolic" />
+                                        <Line type="monotone" dataKey="diastolic" stroke="#2E5895" strokeWidth={2.5} dot={{ r: 5, fill: "#2E5895" }} name="Diastolic" />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            )}
+
+                        {(reportType === "overview" || reportType === "patients" || reportType === "conditions") &&
+                            renderChartCard(
+                                "Patient Age Distribution",
+                                <Users size={20} color="#888" />,
+                                <ResponsiveContainer width="100%" height={250}>
+                                    <BarChart data={ageDistribution} layout="vertical">
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis type="number" tick={{ fontSize: 12, fill: "#888" }} />
+                                        <YAxis dataKey="range" type="category" tick={{ fontSize: 12, fill: "#888" }} />
+                                        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
+                                        <Bar dataKey="count" fill="#FFC32B" radius={[0, 8, 8, 0]} name="Count" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
                     </div>
 
                     {/* Summary Table */}

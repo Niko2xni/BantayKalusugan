@@ -138,6 +138,28 @@ describe("AdminReports", () => {
     });
   });
 
+  it("switches the visible report sections when the report type changes", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <AdminReports />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Health Condition Distribution")).toBeInTheDocument();
+    });
+
+    const reportTypeSelect = screen.getByDisplayValue("Overview Report");
+    await user.selectOptions(reportTypeSelect, "patients");
+
+    await waitFor(() => {
+      expect(screen.getByText("Registration Trends")).toBeInTheDocument();
+      expect(screen.queryByText("Health Condition Distribution")).not.toBeInTheDocument();
+    });
+  });
+
   it("exports CSV using current report filters", async () => {
     const user = userEvent.setup();
     const originalCreateElement = document.createElement.bind(document);
