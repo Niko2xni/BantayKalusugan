@@ -83,6 +83,13 @@ function setupAdminFetchMock() {
     }
 
     if (url.includes("/api/admin/reports/export")) {
+      if (url.includes("format=pdf")) {
+        return Promise.resolve({
+          ok: true,
+          blob: async () => new Blob(["%PDF-1.4\nmock"], { type: "application/pdf" }),
+        });
+      }
+
       return Promise.resolve(blobResponse());
     }
 
@@ -197,6 +204,51 @@ describe("AdminReports", () => {
       );
 
       expect(exportCall?.[0]).toContain("format=csv");
+      expect(exportCall?.[0]).toContain("report_type=overview");
+      expect(exportCall?.[0]).toContain("date_range=thisMonth");
+    } finally {
+      createElementSpy.mockRestore();
+    }
+  });
+
+  it("exports PDF using current report filters", async () => {
+    const user = userEvent.setup();
+    const originalCreateElement = document.createElement.bind(document);
+    const createElementSpy = vi
+      .spyOn(document, "createElement")
+      .mockImplementation((tagName, options) => {
+        const element = originalCreateElement(tagName, options);
+        if (String(tagName).toLowerCase() === "a") {
+          element.click = vi.fn();
+        }
+        return element;
+      });
+
+    try {
+      render(
+        <MemoryRouter>
+          <AdminReports />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /Export Report/i })).toBeEnabled();
+      });
+
+      await user.selectOptions(screen.getByDisplayValue("CSV"), "pdf");
+      await user.click(screen.getByRole("button", { name: /Export Report/i }));
+
+      await waitFor(() => {
+        expect(adminFetch).toHaveBeenCalledWith(
+          expect.stringContaining("/api/admin/reports/export?")
+        );
+      });
+
+      const exportCall = adminFetch.mock.calls.find(([url]) =>
+        url.includes("/api/admin/reports/export?")
+      );
+
+      expect(exportCall?.[0]).toContain("format=pdf");
       expect(exportCall?.[0]).toContain("report_type=overview");
       expect(exportCall?.[0]).toContain("date_range=thisMonth");
     } finally {

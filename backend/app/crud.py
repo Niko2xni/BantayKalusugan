@@ -6,6 +6,11 @@ from datetime import UTC, date, datetime, time, timedelta
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from . import models, schemas
 from .security import get_password_hash, verify_password
@@ -1133,6 +1138,62 @@ def get_community_analytics(db: Session):
     }
 
 
+def _format_report_type_label(report_type: str) -> str:
+    report_labels = {
+        "overview": "Overview Report",
+        "patients": "Patient Statistics",
+        "vitals": "Vital Signs Analysis",
+        "conditions": "Health Conditions",
+    }
+    return report_labels.get(report_type, report_type.replace("_", " ").title())
+
+
+def _get_report_export_data(db: Session, date_range: str):
+    overview = get_report_overview(db, date_range=date_range)
+    trends = get_report_trends(db, date_range=date_range)
+    distributions = get_report_distributions(db, date_range=date_range)
+    return overview, trends, distributions
+
+
+def _build_pdf_table(rows: list[list[object]], col_widths: list[float] | None = None) -> Table:
+    table = Table(rows, colWidths=col_widths, repeatRows=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2E5895")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("LEADING", (0, 0), (-1, -1), 11),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#D6DEE8")),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.white),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F7FAFC")]),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]
+        )
+    )
+    return table
+
+
+def _append_pdf_section(
+    story: list,
+    section_title: str,
+    headers: list[str],
+    rows: list[list[object]],
+    section_style,
+    col_widths: list[float] | None = None,
+):
+    story.append(Paragraph(section_title, section_style))
+    table_rows = [headers]
+    table_rows.extend([[str(value) for value in row] for row in rows])
+    story.append(_build_pdf_table(table_rows, col_widths=col_widths))
+    story.append(Spacer(1, 0.18 * inch))
+
+
 def log_report_generation(
     db: Session,
     current_admin: models.User,
@@ -1155,9 +1216,7 @@ def export_report_csv(
     report_type: str,
     date_range: str,
 ):
-    overview = get_report_overview(db, date_range=date_range)
-    trends = get_report_trends(db, date_range=date_range)
-    distributions = get_report_distributions(db, date_range=date_range)
+    overview, trends, distributions = _get_report_export_data(db, date_range=date_range)
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -1211,6 +1270,151 @@ def export_report_csv(
         target_id=current_admin.id,
         target_type="Report",
         details=f"Exported {report_type} report for {date_range} as CSV",
+    )
+
+    return output.getvalue()
+
+
+def export_report_pdf(
+    db: Session,
+    current_admin: models.User,
+    report_type: str,
+    date_range: str,
+):
+    overview, trends, distributions = _get_report_export_data(db, date_range=date_range)
+
+    output = io.BytesIO()
+    document = SimpleDocTemplate(
+        output,
+        pagesize=letter,
+        rightMargin=0.5 * inch,
+        leftMargin=0.5 * inch,
+        topMargin=0.6 * inch,
+        bottomMargin=0.5 * inch,
+    )
+
+    styles = getSampleStyleSheet()
+    styles.add(
+        ParagraphStyle(
+            name="ReportTitle",
+            parent=styles["Title"],
+            fontName="Helvetica-Bold",
+            fontSize=18,
+            leading=22,
+            textColor=colors.HexColor("#2E5895"),
+            spaceAfter=8,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="ReportMeta",
+            parent=styles["BodyText"],
+            fontName="Helvetica",
+            fontSize=10,
+            leading=13,
+            textColor=colors.HexColor("#4A5568"),
+            spaceAfter=3,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="ReportSection",
+            parent=styles["Heading2"],
+            fontName="Helvetica-Bold",
+            fontSize=12,
+            leading=15,
+            textColor=colors.HexColor("#1F2937"),
+            spaceBefore=8,
+            spaceAfter=6,
+        )
+    )
+
+    story = []
+
+    report_label = _format_report_type_label(report_type)
+    generated_by = f"{current_admin.first_name} {current_admin.last_name}".strip() or current_admin.email
+
+    story.append(Paragraph("BantayKalusugan Admin Report", styles["ReportTitle"]))
+    story.append(Paragraph(report_label, styles["ReportMeta"]))
+    story.append(Paragraph(f"Report Type: {report_label}", styles["ReportMeta"]))
+    story.append(Paragraph(f"Date Range: {date_range}", styles["ReportMeta"]))
+    story.append(Paragraph(f"Generated By: {generated_by}", styles["ReportMeta"]))
+    story.append(Paragraph(f"Generated On: {date.today().isoformat()}", styles["ReportMeta"]))
+    story.append(Spacer(1, 0.2 * inch))
+
+    _append_pdf_section(
+        story,
+        "Overview Metrics",
+        ["Metric", "Value"],
+        [
+            ["Total Patients", overview["total_patients"]],
+            ["BP Records Today", overview["bp_records_today"]],
+            ["Total Visits", overview["total_visits"]],
+            ["Average Systolic", overview["avg_systolic"]],
+            ["Average Diastolic", overview["avg_diastolic"]],
+            ["Reports Generated", overview["reports_generated"]],
+        ],
+        styles["ReportSection"],
+        col_widths=[2.2 * inch, 4.6 * inch],
+    )
+
+    _append_pdf_section(
+        story,
+        "Monthly Summary",
+        ["Month", "Patients", "Visits", "Average Systolic BP"],
+        [
+            [point["month"], point["patients"], point["visits"], point["avg_bp"]]
+            for point in trends["monthly_summary"]
+        ],
+        styles["ReportSection"],
+        col_widths=[1.2 * inch, 1.0 * inch, 1.0 * inch, 2.7 * inch],
+    )
+
+    _append_pdf_section(
+        story,
+        "Blood Pressure Trends",
+        ["Month", "Avg Systolic", "Avg Diastolic"],
+        [[point["month"], point["systolic"], point["diastolic"]] for point in trends["bp_trends"]],
+        styles["ReportSection"],
+        col_widths=[2.0 * inch, 2.0 * inch, 2.0 * inch],
+    )
+
+    _append_pdf_section(
+        story,
+        "Registration Trends",
+        ["Month", "New Patients"],
+        [[point["month"], point["patients"]] for point in trends["registrations"]],
+        styles["ReportSection"],
+        col_widths=[3.0 * inch, 3.0 * inch],
+    )
+
+    _append_pdf_section(
+        story,
+        "Health Condition Distribution",
+        ["Condition", "Count"],
+        [[point["name"], point["value"]] for point in distributions["health_conditions"]],
+        styles["ReportSection"],
+        col_widths=[3.0 * inch, 3.0 * inch],
+    )
+
+    _append_pdf_section(
+        story,
+        "Age Distribution",
+        ["Age Range", "Count"],
+        [[point["range"], point["count"]] for point in distributions["age_distribution"]],
+        styles["ReportSection"],
+        col_widths=[3.0 * inch, 3.0 * inch],
+    )
+
+    document.build(story)
+
+    create_audit_log(
+        db=db,
+        admin_id=current_admin.id,
+        action="Added",
+        target_id=current_admin.id,
+        target_type="Report",
+        details=f"Exported {report_type} report for {date_range} as PDF",
     )
 
     return output.getvalue()

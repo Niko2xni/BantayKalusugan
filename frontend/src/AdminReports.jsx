@@ -59,6 +59,7 @@ const REPORT_TYPE_CONFIG = {
 export default function AdminReports() {
     const [reportType, setReportType] = useState("overview");
     const [dateRange, setDateRange] = useState("thisMonth");
+    const [exportFormat, setExportFormat] = useState("csv");
     const [isExporting, setIsExporting] = useState(false);
     const [overview, setOverview] = useState({
         total_patients: 0,
@@ -166,7 +167,7 @@ export default function AdminReports() {
         setIsExporting(true);
         try {
             const params = new URLSearchParams({
-                format: "csv",
+                format: exportFormat,
                 report_type: reportType,
                 date_range: dateRange,
             });
@@ -179,7 +180,7 @@ export default function AdminReports() {
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `admin-report-${reportType}-${dateRange}-${new Date().toISOString().split("T")[0]}.csv`;
+            link.download = `admin-report-${reportType}-${dateRange}-${new Date().toISOString().split("T")[0]}.${exportFormat}`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -278,6 +279,20 @@ export default function AdminReports() {
                                         <option value="last3Months">Last 3 Months</option>
                                         <option value="last6Months">Last 6 Months</option>
                                         <option value="thisYear">This Year</option>
+                                    </select>
+                                </div>
+
+                                <div style={{ display: "flex", flexDirection: "column" }}>
+                                    <label style={{ fontSize: "0.75rem", marginBottom: "0.25rem", color: "#888", fontWeight: 600 }}>
+                                        Export Format
+                                    </label>
+                                    <select
+                                        value={exportFormat}
+                                        onChange={(e) => setExportFormat(e.target.value)}
+                                        style={{ padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "1px solid #e0e0e0", fontSize: "0.875rem", outline: "none", color: "#333" }}
+                                    >
+                                        <option value="csv">CSV</option>
+                                        <option value="pdf">PDF</option>
                                     </select>
                                 </div>
                             </div>

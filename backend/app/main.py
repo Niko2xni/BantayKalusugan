@@ -46,7 +46,6 @@ def read_root():
 
 @app.post("/api/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Block admin domain from public registration
     if user.email.lower().endswith("@bantaykalusugan.com"):
         raise HTTPException(status_code=400, detail="This email domain is reserved for admin accounts. Please use a different email.")
     db_user = crud.get_user_by_email(db, email=user.email)
@@ -430,7 +429,19 @@ def export_report_csv(
     current_admin: models.User = Depends(security.require_admin),
 ):
     if format == "pdf":
-        raise HTTPException(status_code=501, detail="PDF export is not implemented yet")
+        pdf_content = crud.export_report_pdf(
+            db=db,
+            current_admin=current_admin,
+            report_type=report_type,
+            date_range=date_range,
+        )
+        filename = f"admin-report-{report_type}-{date_range}-{date.today().isoformat()}.pdf"
+
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     csv_content = crud.export_report_csv(
         db=db,

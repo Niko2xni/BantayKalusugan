@@ -1,8 +1,27 @@
 from datetime import date, timedelta
 
 import pytest
+from fastapi.testclient import TestClient
 
 from app import crud, models, schemas, security
+from app.database import get_db
+from app.main import app
+
+
+@pytest.fixture()
+def client(db_session):
+    def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
+
+
+def _auth_headers(user):
+    token = security.create_access_token({"sub": str(user.id), "role": user.role})
+    return {"Authorization": f"Bearer {token}"}
 
 
 def _recent_month_midpoints(count):
@@ -71,6 +90,22 @@ def test_report_queries_and_csv_export(db_session, user_factory):
     )
     assert export_audit_log is not None
     assert "Exported overview report" in export_audit_log.details
+
+
+def test_admin_report_pdf_export_route(client, user_factory):
+    admin = user_factory(email="admin.reports.pdf@example.com", role="admin")
+
+    response = client.get(
+        "/api/admin/reports/export?format=pdf&report_type=overview&date_range=thisMonth",
+        headers=_auth_headers(admin),
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert response.headers["content-disposition"].startswith(
+        'attachment; filename="admin-report-overview-thisMonth-'
+    )
+    assert response.content.startswith(b"%PDF")
 
 
 def test_settings_and_password_change_flow(db_session, user_factory):
