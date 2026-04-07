@@ -31,18 +31,18 @@ createRoot(document.getElementById('root')).render(
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Protected: any logged-in user (patient or admin) */}
+          {/* Protected: patient only */}
           <Route path="/dashboard" element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="patient">
               <Dashboard />
             </ProtectedRoute>
           } />
-          <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
-          <Route path="/schedules" element={<ProtectedRoute><SchedulesPage /></ProtectedRoute>} />
-          <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
-          <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-          <Route path="/vitals" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute requiredRole="patient"><AnalyticsPage /></ProtectedRoute>} />
+          <Route path="/schedules" element={<ProtectedRoute requiredRole="patient"><SchedulesPage /></ProtectedRoute>} />
+          <Route path="/chat" element={<ProtectedRoute requiredRole="patient"><ChatPage /></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute requiredRole="patient"><HelpPage /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute requiredRole="patient"><ProfilePage /></ProtectedRoute>} />
+          <Route path="/vitals" element={<ProtectedRoute requiredRole="patient"><AnalyticsPage /></ProtectedRoute>} />
 
           {/* Protected: admin only */}
           <Route path="/admin" element={

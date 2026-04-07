@@ -261,6 +261,12 @@ class AppointmentRescheduleRequest(BaseModel):
     notes: Optional[str] = None
 
 
+class AdminAppointmentStatusUpdate(BaseModel):
+    status: str
+    assigned_staff: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class NotificationBase(BaseModel):
     title: str
     body: str

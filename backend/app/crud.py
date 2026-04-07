@@ -172,6 +172,35 @@ def _format_appointment_title(appointment: models.Appointment) -> str:
     scheduled = appointment.scheduled_at.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
     return f"{appointment.appointment_type} on {scheduled}"
 
+
+def _format_user_full_name(user: models.User | None) -> str:
+    if user is None:
+        return "Unknown"
+    full_name = f"{user.first_name} {user.last_name}".strip()
+    return full_name or user.email or "Unknown"
+
+
+def _notify_admin_users(
+    db: Session,
+    title: str,
+    body: str,
+    kind: str = "general",
+):
+    admins = (
+        db.query(models.User)
+        .filter(models.User.role == "admin", models.User.is_active.is_(True))
+        .all()
+    )
+
+    for admin in admins:
+        _create_notification(
+            db,
+            user_id=admin.id,
+            title=title,
+            body=body,
+            kind=kind,
+        )
+
 # Get a single user by ID
 def get_user(db: Session, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
@@ -338,6 +367,16 @@ def request_patient_appointment(
         kind="appointment",
     )
 
+    _notify_admin_users(
+        db,
+        title="New appointment request",
+        body=(
+            f"{_format_user_full_name(patient)} requested "
+            f"{appointment.appointment_type} on {appointment.scheduled_at.astimezone(UTC).strftime('%Y-%m-%d %H:%M UTC')}."
+        ),
+        kind="appointment",
+    )
+
     db.commit()
     db.refresh(appointment)
     return appointment
@@ -403,6 +442,115 @@ def reschedule_patient_appointment(
         title="Appointment reschedule requested",
         body=f"Your appointment was moved to {_format_appointment_title(appointment)} and is pending confirmation.",
         kind="appointment",
+    )
+
+    _notify_admin_users(
+        db,
+        title="Appointment reschedule requested",
+        body=(
+            f"{_format_user_full_name(patient)} requested to move "
+            f"{appointment.appointment_type} to {appointment.scheduled_at.astimezone(UTC).strftime('%Y-%m-%d %H:%M UTC')}."
+        ),
+        kind="appointment",
+    )
+
+    db.commit()
+    db.refresh(appointment)
+    return appointment
+
+
+def get_admin_appointments(
+    db: Session,
+    status: str | None = None,
+    search: str | None = None,
+):
+    query = (
+        db.query(models.Appointment)
+        .join(models.User, models.Appointment.patient_id == models.User.id)
+        .filter(models.User.role == "patient")
+    )
+
+    if status:
+        query = query.filter(models.Appointment.status == status)
+
+    if search:
+        term = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                models.User.first_name.ilike(term),
+                models.User.last_name.ilike(term),
+                models.User.email.ilike(term),
+                models.Appointment.appointment_type.ilike(term),
+                models.Appointment.health_area.ilike(term),
+            )
+        )
+
+    return query.order_by(models.Appointment.scheduled_at.asc(), models.Appointment.id.asc()).all()
+
+
+def update_admin_appointment_status(
+    db: Session,
+    current_admin: models.User,
+    appointment_id: int,
+    payload: schemas.AdminAppointmentStatusUpdate,
+):
+    appointment = db.query(models.Appointment).filter(models.Appointment.id == appointment_id).first()
+    if appointment is None:
+        raise ValueError("Appointment not found")
+
+    next_status = payload.status.strip().title()
+    allowed_statuses = {"Pending", "Confirmed", "Completed", "Cancelled"}
+    if next_status not in allowed_statuses:
+        raise ValueError("Unsupported appointment status")
+
+    appointment.status = next_status
+    appointment.updated_at = datetime.now(UTC)
+
+    if payload.assigned_staff is not None:
+        assigned_staff = payload.assigned_staff.strip()
+        if assigned_staff:
+            appointment.assigned_staff = assigned_staff
+    elif next_status in {"Confirmed", "Completed"}:
+        appointment.assigned_staff = _format_user_full_name(current_admin)
+
+    if payload.notes is not None:
+        appointment.notes = payload.notes.strip()
+
+    if next_status == "Confirmed":
+        notification_title = "Appointment confirmed"
+        notification_body = (
+            f"Your {_format_appointment_title(appointment)} has been confirmed by health staff."
+        )
+    elif next_status == "Completed":
+        notification_title = "Appointment completed"
+        notification_body = f"Your {_format_appointment_title(appointment)} has been marked completed."
+    elif next_status == "Cancelled":
+        notification_title = "Appointment cancelled by health staff"
+        notification_body = f"Your {_format_appointment_title(appointment)} has been cancelled by health staff."
+    else:
+        notification_title = "Appointment updated"
+        notification_body = (
+            f"Your {_format_appointment_title(appointment)} was updated and is now {next_status.lower()}."
+        )
+
+    _create_notification(
+        db,
+        user_id=appointment.patient_id,
+        title=notification_title,
+        body=notification_body,
+        kind="appointment",
+    )
+
+    create_audit_log(
+        db=db,
+        admin_id=current_admin.id,
+        action="Updated",
+        target_id=appointment.id,
+        target_type="Appointment",
+        details=(
+            f"Updated appointment {appointment.id} to {next_status} "
+            f"for patient {appointment.patient_id}"
+        ),
     )
 
     db.commit()
@@ -523,12 +671,6 @@ def _classify_support_intent(message: str) -> str:
             "confirmation",
         ),
     )
-
-    if _contains_any_keyword(
-        normalized,
-        ("escalate", "staff member", "health staff", "human agent", "real person"),
-    ):
-        return "escalation"
 
     if has_appointment_context and _contains_any_keyword(
         normalized,
@@ -652,13 +794,6 @@ def _build_fallback_reply(unread_count: int) -> str:
     return _append_unread_notification_note(reply, unread_count)
 
 
-def _build_escalation_reply() -> str:
-    return (
-        "I have noted your escalation request. A health staff member should review this concern. "
-        "For urgent issues, please contact your barangay health center directly."
-    )
-
-
 def _build_bot_reply(
     db: Session,
     user_id: int,
@@ -672,8 +807,6 @@ def _build_bot_reply(
     unread_count = _count_unread_notifications(db, user_id)
     appointments = get_patient_appointments(db, patient_id=user_id)
 
-    if intent == "escalation":
-        return _build_escalation_reply()
     if intent == "schedule_lookup":
         return _build_schedule_lookup_reply(appointments, unread_count)
     if intent == "confirmation_lookup":

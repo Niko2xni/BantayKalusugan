@@ -90,22 +90,4 @@ describe("ChatPage", () => {
 
     expect(await screen.findByText("Use the Schedules page for appointment actions.")).toBeInTheDocument();
   });
-
-  it("supports escalation quick action", async () => {
-    const user = userEvent.setup();
-    render(<ChatPage />);
-
-    await screen.findByText("Hello");
-
-    await user.click(screen.getByRole("button", { name: "Escalate" }));
-
-    await waitFor(() => {
-      expect(mockSendChatMessage).toHaveBeenCalledWith({
-        message: "Please escalate this concern to a health staff member.",
-        channel: "support",
-      });
-    });
-
-    expect(mockNotifyNotificationsRefresh).toHaveBeenCalledWith("chat-message-sent");
-  });
 });

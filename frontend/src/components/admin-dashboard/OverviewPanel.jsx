@@ -19,15 +19,50 @@ import {
 import StatusBadge from "./StatusBadge";
 import { getStatus } from "./dashboardUtils";
 
+function formatDateTime(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Invalid date";
+  }
+
+  return parsed.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getAppointmentStatusColors(status) {
+  switch (status) {
+    case "Confirmed":
+      return { bg: "#d1fae5", text: "#065f46" };
+    case "Pending":
+      return { bg: "#fef3c7", text: "#92400e" };
+    case "Completed":
+      return { bg: "#e5e7eb", text: "#374151" };
+    case "Cancelled":
+      return { bg: "#fee2e2", text: "#991b1b" };
+    default:
+      return { bg: "#f3f4f6", text: "#1f2937" };
+  }
+}
+
 export default function OverviewPanel({
   statsSummary,
   bpTrendData,
   registrationsData,
   patients,
+  appointmentsQueue,
   getPatientLatestVitals,
+  onUpdateAppointmentStatus,
+  updatingAppointmentId,
   onViewAllPatients,
   isLoading,
   error,
+  appointmentsLoading,
+  appointmentsError,
   onRetry,
 }) {
   if (isLoading) {
@@ -79,6 +114,29 @@ export default function OverviewPanel({
       color: "#2E5895",
     },
   ];
+
+  const getPatientLabel = (patientDbId) => {
+    const patient = patients.find((item) => item.dbId === patientDbId);
+    if (!patient) {
+      return {
+        name: `Patient #${patientDbId}`,
+        id: `P-${String(patientDbId || "").padStart(3, "0")}`,
+      };
+    }
+
+    return {
+      name: `${patient.firstName} ${patient.lastName}`,
+      id: patient.id,
+    };
+  };
+
+  const queuedAppointments = [...appointmentsQueue].sort((a, b) => {
+    const statusPriority = { Pending: 0, Confirmed: 1, Completed: 2, Cancelled: 3 };
+    const aPriority = statusPriority[a.status] ?? 99;
+    const bPriority = statusPriority[b.status] ?? 99;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+  });
 
   return (
     <div>
@@ -227,6 +285,135 @@ export default function OverviewPanel({
                     </td>
                     <td>
                       <StatusBadge status={status} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="table-card" style={{ marginTop: "1.5rem" }}>
+        <div className="table-card-header">
+          <h3 className="table-card-title">Appointment Queue</h3>
+        </div>
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Appointment</th>
+                <th>Schedule</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {appointmentsLoading && (
+                <tr>
+                  <td colSpan={5}>Loading appointment queue...</td>
+                </tr>
+              )}
+
+              {!appointmentsLoading && appointmentsError && (
+                <tr>
+                  <td colSpan={5} style={{ color: "#c23b21" }}>
+                    {appointmentsError}
+                  </td>
+                </tr>
+              )}
+
+              {!appointmentsLoading && !appointmentsError && queuedAppointments.length === 0 && (
+                <tr>
+                  <td colSpan={5}>No appointments in queue yet.</td>
+                </tr>
+              )}
+
+              {!appointmentsLoading && !appointmentsError && queuedAppointments.slice(0, 8).map((appointment) => {
+                const patientInfo = getPatientLabel(appointment.patientDbId);
+                const statusColors = getAppointmentStatusColors(appointment.status);
+                const isUpdating = updatingAppointmentId === appointment.dbId;
+
+                return (
+                  <tr key={appointment.id}>
+                    <td>
+                      <div className="patient-name">{patientInfo.name}</div>
+                      <div className="patient-id">{patientInfo.id}</div>
+                    </td>
+                    <td>
+                      <div className="patient-name">{appointment.appointmentType}</div>
+                      <div className="patient-id">{appointment.healthArea}</div>
+                    </td>
+                    <td>{formatDateTime(appointment.scheduledAt)}</td>
+                    <td>
+                      <span
+                        className="badge"
+                        style={{ backgroundColor: statusColors.bg, color: statusColors.text }}
+                      >
+                        {appointment.status}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="row-actions" style={{ flexWrap: "wrap" }}>
+                        {appointment.status === "Pending" && (
+                          <>
+                            <button
+                              className="table-action-btn"
+                              style={{ padding: "0.3rem 0.6rem", fontSize: "0.7rem" }}
+                              onClick={() => onUpdateAppointmentStatus(appointment, "Confirmed")}
+                              disabled={isUpdating}
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              className="table-action-btn secondary"
+                              style={{
+                                padding: "0.3rem 0.6rem",
+                                fontSize: "0.7rem",
+                                backgroundColor: "#fee2e2",
+                                borderColor: "#fecaca",
+                                color: "#991b1b",
+                              }}
+                              onClick={() => onUpdateAppointmentStatus(appointment, "Cancelled")}
+                              disabled={isUpdating}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+
+                        {appointment.status === "Confirmed" && (
+                          <>
+                            <button
+                              className="table-action-btn"
+                              style={{ padding: "0.3rem 0.6rem", fontSize: "0.7rem" }}
+                              onClick={() => onUpdateAppointmentStatus(appointment, "Completed")}
+                              disabled={isUpdating}
+                            >
+                              Complete
+                            </button>
+                            <button
+                              className="table-action-btn secondary"
+                              style={{
+                                padding: "0.3rem 0.6rem",
+                                fontSize: "0.7rem",
+                                backgroundColor: "#fee2e2",
+                                borderColor: "#fecaca",
+                                color: "#991b1b",
+                              }}
+                              onClick={() => onUpdateAppointmentStatus(appointment, "Cancelled")}
+                              disabled={isUpdating}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+
+                        {(appointment.status === "Completed" || appointment.status === "Cancelled") && (
+                          <span style={{ color: "#94a3b8", fontSize: "0.75rem" }}>No actions</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

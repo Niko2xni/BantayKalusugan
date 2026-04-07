@@ -72,16 +72,11 @@ const ChatPage = () => {
     }
   };
 
-
-  const handleEscalate = async () => {
-    await handleSend('Please escalate this concern to a health staff member.');
-  };
-
   return (
     <Layout
       heroLabel="Support Assistant"
       heroTitle={<>Bantay Kalusugan <span className={styles['hero__title--gold']}>Assistant</span></>}
-      heroDesc="Ask about appointment schedules, confirmation status, rescheduling, and cancellation concerns."
+      heroDesc="Ask about appointment schedules and confirmation concerns."
     >
       <section className={`${styles.section} ${styles['section--white']}`}>
         <div style={{ maxWidth: '800px', margin: '0 auto', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '650px' }}>
@@ -163,14 +158,6 @@ const ChatPage = () => {
 
           {/* Input Area */}
           <div style={{ padding: '16px 20px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <button
-              type="button"
-              onClick={handleEscalate}
-              className={`${styles.btn} ${styles['btn--outline-navy']} ${styles['btn--sm']}`}
-              disabled={sending}
-            >
-              Escalate
-            </button>
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}

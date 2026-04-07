@@ -349,6 +349,42 @@ def mark_admin_notifications_read_all(
     return {"message": f"Marked {count} notifications as read"}
 
 
+@app.get("/api/admin/appointments", response_model=List[schemas.Appointment])
+def read_admin_appointments(
+    status: str | None = None,
+    search: str | None = None,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    normalized_status = status.title() if status else None
+    return crud.get_admin_appointments(db, status=normalized_status, search=search)
+
+
+@app.patch("/api/admin/appointments/{appointment_id}/status", response_model=schemas.Appointment)
+def update_admin_appointment_status(
+    appointment_id: int,
+    payload: schemas.AdminAppointmentStatusUpdate,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(security.require_admin),
+):
+    try:
+        normalized_payload = schemas.AdminAppointmentStatusUpdate(
+            status=payload.status.title(),
+            assigned_staff=payload.assigned_staff,
+            notes=payload.notes,
+        )
+        return crud.update_admin_appointment_status(
+            db,
+            current_admin=current_admin,
+            appointment_id=appointment_id,
+            payload=normalized_payload,
+        )
+    except ValueError as exc:
+        detail = str(exc)
+        status_code = 404 if "not found" in detail.lower() else 400
+        raise HTTPException(status_code=status_code, detail=detail)
+
+
 @app.get("/api/me/chat/messages", response_model=List[schemas.ChatMessage])
 def read_current_patient_chat_messages(
     channel: str = "support",

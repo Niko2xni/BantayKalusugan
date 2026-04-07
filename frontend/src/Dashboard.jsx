@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 
 import { getStoredUser } from './utils/authSession';
+import { fetchAppointments } from './utils/patientPortalApi';
 import usePatientVitalsData from './hooks/usePatientVitalsData';
 import Layout from './Layout.jsx';
 import styles from './user_dashboard.module.css';
@@ -50,12 +51,35 @@ const metricConfigs = {
   },
 };
 
-const appointmentsData = [
-  { appointmentType: 'Check-up', dateTime: 'Mar 11, 2026 - 2:00 PM', status: 'Confirmed', healthArea: 'General', statusColor: '#10b981' },
-  { appointmentType: 'Follow-up', dateTime: 'Mar 18, 2026 - 10:30 AM', status: 'Confirmed', healthArea: 'Dental', statusColor: '#10b981' },
-  { appointmentType: 'Immunization', dateTime: 'Mar 25, 2026 - 3:15 PM', status: 'Pending', healthArea: 'Immunization', statusColor: '#f59e0b' },
-  { appointmentType: 'Consultation', dateTime: 'Feb 10, 2026 - 11:00 AM', status: 'Completed', healthArea: 'Family Planning', statusColor: '#6b7280' },
-];
+function formatAppointmentDateTime(isoString) {
+  const parsed = new Date(isoString);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Invalid date';
+  }
+
+  return parsed.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function getAppointmentStatusColor(status) {
+  switch (status) {
+    case 'Confirmed':
+      return '#10b981';
+    case 'Pending':
+      return '#f59e0b';
+    case 'Completed':
+      return '#6b7280';
+    case 'Cancelled':
+      return '#ef4444';
+    default:
+      return '#475569';
+  }
+}
 
 function VitalCard({ title, value, unit, status, icon }) {
   const { bgColor, color } = getStatusColors(status);
@@ -85,6 +109,9 @@ const Dashboard = () => {
 
   const [activeMetric, setActiveMetric] = useState('BP');
   const [dateRange, setDateRange] = useState('3M');
+  const [appointments, setAppointments] = useState([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [appointmentsError, setAppointmentsError] = useState('');
 
   const {
     vitals,
@@ -107,6 +134,38 @@ const Dashboard = () => {
       skip: 0,
     }));
   }, [dateRange, setFilters]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAppointments = async () => {
+      setAppointmentsLoading(true);
+      setAppointmentsError('');
+
+      try {
+        const rows = await fetchAppointments();
+        if (!isMounted) return;
+        setAppointments(Array.isArray(rows) ? rows : []);
+      } catch (loadIssue) {
+        if (!isMounted) return;
+        setAppointmentsError(
+          loadIssue instanceof Error
+            ? loadIssue.message
+            : 'Unable to load appointments.'
+        );
+      } finally {
+        if (isMounted) {
+          setAppointmentsLoading(false);
+        }
+      }
+    };
+
+    loadAppointments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const metricData = useMemo(() => buildMetricSeries(vitals), [vitals]);
   const activeMetricConfig = metricConfigs[activeMetric];
@@ -227,6 +286,35 @@ const Dashboard = () => {
   const insightsMessage = overview
     ? `You have ${overview.normal_bp_records} normal, ${overview.elevated_bp_records} elevated, and ${overview.abnormal_bp_records} abnormal blood pressure records in this range.`
     : 'Load your records to view personalized trend insights.';
+
+  const dashboardAppointments = useMemo(() => {
+    const now = Date.now();
+
+    return [...appointments]
+      .sort((a, b) => {
+        const aTime = new Date(a.scheduled_at).getTime();
+        const bTime = new Date(b.scheduled_at).getTime();
+        const safeATime = Number.isNaN(aTime) ? Number.MAX_SAFE_INTEGER : aTime;
+        const safeBTime = Number.isNaN(bTime) ? Number.MAX_SAFE_INTEGER : bTime;
+        const aIsUpcoming = safeATime >= now;
+        const bIsUpcoming = safeBTime >= now;
+
+        if (aIsUpcoming !== bIsUpcoming) {
+          return aIsUpcoming ? -1 : 1;
+        }
+
+        return aIsUpcoming ? safeATime - safeBTime : safeBTime - safeATime;
+      })
+      .slice(0, 5)
+      .map((appointment) => ({
+        id: appointment.id,
+        appointmentType: appointment.appointment_type,
+        dateTime: formatAppointmentDateTime(appointment.scheduled_at),
+        status: appointment.status,
+        healthArea: appointment.health_area,
+        statusColor: getAppointmentStatusColor(appointment.status),
+      }));
+  }, [appointments]);
 
   return (
     <Layout
@@ -445,8 +533,32 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {appointmentsData.map((apt, idx) => (
-                <tr key={idx}>
+              {appointmentsLoading && (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', color: '#64748b' }}>
+                    Loading appointments...
+                  </td>
+                </tr>
+              )}
+
+              {!appointmentsLoading && appointmentsError && (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', color: '#dc2626' }}>
+                    {appointmentsError}
+                  </td>
+                </tr>
+              )}
+
+              {!appointmentsLoading && !appointmentsError && dashboardAppointments.length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', color: '#64748b' }}>
+                    No appointments found. Visit Schedules to request your first appointment.
+                  </td>
+                </tr>
+              )}
+
+              {!appointmentsLoading && !appointmentsError && dashboardAppointments.map((apt) => (
+                <tr key={apt.id}>
                   <td>{apt.appointmentType}</td>
                   <td>{apt.dateTime}</td>
                   <td>

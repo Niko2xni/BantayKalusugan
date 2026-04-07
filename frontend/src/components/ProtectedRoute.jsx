@@ -25,7 +25,8 @@ export default function ProtectedRoute({ children, requiredRole }) {
 
   // If a specific role is required and user doesn't have it → redirect to their dashboard
   if (requiredRole && user.role !== requiredRole) {
-    return <Navigate to="/dashboard" replace />;
+    const redirectPath = user.role === "admin" ? "/admin" : "/dashboard";
+    return <Navigate to={redirectPath} replace />;
   }
 
   return children;

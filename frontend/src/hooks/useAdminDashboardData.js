@@ -69,6 +69,23 @@ function mapVital(vital) {
   };
 }
 
+function mapAppointment(appointment) {
+  return {
+    id: `A-${String(appointment.id).padStart(3, "0")}`,
+    dbId: appointment.id,
+    patientDbId: appointment.patient_id,
+    patientId: `P-${String(appointment.patient_id).padStart(3, "0")}`,
+    appointmentType: appointment.appointment_type,
+    healthArea: appointment.health_area,
+    scheduledAt: appointment.scheduled_at,
+    status: appointment.status,
+    location: appointment.location || "",
+    assignedStaff: appointment.assigned_staff || "",
+    notes: appointment.notes || "",
+    requestedNotes: appointment.requested_notes || "",
+  };
+}
+
 async function readErrorMessage(response, fallback) {
   try {
     const payload = await response.json();
@@ -81,18 +98,21 @@ async function readErrorMessage(response, fallback) {
 export default function useAdminDashboardData() {
   const [patients, setPatients] = useState([]);
   const [vitalSigns, setVitalSigns] = useState([]);
+  const [appointmentsQueue, setAppointmentsQueue] = useState([]);
   const [bpTrendData, setBpTrendData] = useState([]);
   const [registrationsData, setRegistrationsData] = useState([]);
 
   const [loading, setLoading] = useState({
     patients: true,
     vitals: true,
+    appointments: true,
     stats: true,
   });
 
   const [errors, setErrors] = useState({
     patients: "",
     vitals: "",
+    appointments: "",
     stats: "",
   });
 
@@ -138,6 +158,30 @@ export default function useAdminDashboardData() {
     }
   }, []);
 
+  const refreshAppointments = useCallback(async () => {
+    setLoading((prev) => ({ ...prev, appointments: true }));
+    setErrors((prev) => ({ ...prev, appointments: "" }));
+
+    try {
+      const response = await adminFetch("/api/admin/appointments");
+      if (!response.ok) {
+        throw new Error(await readErrorMessage(response, "Failed to fetch appointment queue"));
+      }
+
+      const data = await response.json();
+      setAppointmentsQueue((data || []).map(mapAppointment));
+    } catch (error) {
+      if (error.message !== AUTH_REDIRECT_ERROR) {
+        setErrors((prev) => ({
+          ...prev,
+          appointments: error.message || "Failed to fetch appointment queue",
+        }));
+      }
+    } finally {
+      setLoading((prev) => ({ ...prev, appointments: false }));
+    }
+  }, []);
+
   const refreshStats = useCallback(async () => {
     setLoading((prev) => ({ ...prev, stats: true }));
     setErrors((prev) => ({ ...prev, stats: "" }));
@@ -163,8 +207,9 @@ export default function useAdminDashboardData() {
   useEffect(() => {
     refreshPatients();
     refreshVitals();
+    refreshAppointments();
     refreshStats();
-  }, [refreshPatients, refreshVitals, refreshStats]);
+  }, [refreshPatients, refreshVitals, refreshAppointments, refreshStats]);
 
   const createPatient = useCallback(
     async (payload) => {
@@ -299,6 +344,33 @@ export default function useAdminDashboardData() {
     [refreshVitals, refreshStats]
   );
 
+  const updateAppointmentStatus = useCallback(
+    async (appointmentId, payload) => {
+      try {
+        const response = await adminFetch(`/api/admin/appointments/${appointmentId}/status`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          return {
+            ok: false,
+            error: await readErrorMessage(response, "Failed to update appointment status"),
+          };
+        }
+
+        await refreshAppointments();
+        return { ok: true };
+      } catch (error) {
+        if (error.message === AUTH_REDIRECT_ERROR) {
+          return { ok: false, error: "Session expired. Please sign in again." };
+        }
+        return { ok: false, error: error.message || "Failed to update appointment status" };
+      }
+    },
+    [refreshAppointments]
+  );
+
   const getPatientLatestVitals = useCallback(
     (patientId) => {
       const patientVitals = vitalSigns
@@ -350,6 +422,7 @@ export default function useAdminDashboardData() {
   return {
     patients,
     vitalSigns,
+    appointmentsQueue,
     bpTrendData,
     registrationsData,
     loading,
@@ -357,12 +430,14 @@ export default function useAdminDashboardData() {
     statsSummary,
     refreshPatients,
     refreshVitals,
+    refreshAppointments,
     refreshStats,
     createPatient,
     updatePatient,
     deletePatient,
     createVital,
     deleteVital,
+    updateAppointmentStatus,
     getPatientLatestVitals,
     getVitalPatientName,
   };

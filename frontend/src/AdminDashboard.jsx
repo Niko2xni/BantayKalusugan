@@ -56,12 +56,14 @@ export default function AdminDashboard() {
 
   const [deleteDialog, setDeleteDialog] = useState({ type: "", item: null });
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [updatingAppointmentId, setUpdatingAppointmentId] = useState(null);
 
   const [toast, setToast] = useState(null);
 
   const {
     patients,
     vitalSigns,
+    appointmentsQueue,
     bpTrendData,
     registrationsData,
     loading,
@@ -69,12 +71,14 @@ export default function AdminDashboard() {
     statsSummary,
     refreshPatients,
     refreshVitals,
+    refreshAppointments,
     refreshStats,
     createPatient,
     updatePatient,
     deletePatient,
     createVital,
     deleteVital,
+    updateAppointmentStatus,
     getPatientLatestVitals,
     getVitalPatientName,
   } = useAdminDashboardData();
@@ -110,6 +114,30 @@ export default function AdminDashboard() {
       message,
       id: Date.now(),
     });
+  };
+
+  const handleUpdateAppointmentStatus = async (appointment, nextStatus) => {
+    if (!appointment?.dbId) {
+      pushToast("error", "Unable to update appointment: missing database identifier.");
+      return;
+    }
+
+    setUpdatingAppointmentId(appointment.dbId);
+
+    const result = await updateAppointmentStatus(appointment.dbId, {
+      status: nextStatus,
+      assigned_staff: appointment.assignedStaff || "Admin Staff",
+      notes: appointment.notes || appointment.requestedNotes || "",
+    });
+
+    setUpdatingAppointmentId(null);
+
+    if (result.ok) {
+      pushToast("success", `Appointment marked as ${nextStatus}.`);
+      return;
+    }
+
+    pushToast("error", result.error || "Failed to update appointment status.");
   };
 
   const handleAddPatientSubmit = async (form) => {
@@ -319,6 +347,7 @@ export default function AdminDashboard() {
               onReset={() => {
                 refreshPatients();
                 refreshVitals();
+                refreshAppointments();
                 refreshStats();
               }}
             >
@@ -327,13 +356,19 @@ export default function AdminDashboard() {
                 bpTrendData={bpTrendData}
                 registrationsData={registrationsData}
                 patients={patients}
+                appointmentsQueue={appointmentsQueue}
                 getPatientLatestVitals={getPatientLatestVitals}
+                onUpdateAppointmentStatus={handleUpdateAppointmentStatus}
+                updatingAppointmentId={updatingAppointmentId}
                 onViewAllPatients={() => setActiveNav("patients")}
                 isLoading={loading.stats || loading.patients || loading.vitals}
                 error={overviewError}
+                appointmentsLoading={loading.appointments}
+                appointmentsError={errors.appointments}
                 onRetry={() => {
                   refreshPatients();
                   refreshVitals();
+                  refreshAppointments();
                   refreshStats();
                 }}
               />
