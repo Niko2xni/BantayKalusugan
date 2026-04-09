@@ -1,4 +1,4 @@
-import { Eye, Edit2, Filter, Plus, Search, Trash2 } from "lucide-react";
+import { Eye, Edit2, Filter, Plus, Search, Trash2, MessageSquare } from "lucide-react";
 
 import StatusBadge from "./StatusBadge";
 import { getStatus } from "./dashboardUtils";
@@ -12,6 +12,8 @@ export default function PatientsPanel({
   onOpenEditPatient,
   onDeletePatient,
   onViewPatientVitals,
+  onNotifyPatient,
+  onOpenTestNotify,
   isLoading,
   error,
   onRetry,
@@ -48,6 +50,14 @@ export default function PatientsPanel({
           >
             <Plus size={14} />
             Add Patient
+          </button>
+          <button
+            onClick={onOpenTestNotify}
+            className="table-action-btn secondary"
+            type="button"
+          >
+            <MessageSquare size={14} />
+            Test SMS
           </button>
           <button
             onClick={onRetry}
@@ -138,6 +148,15 @@ export default function PatientsPanel({
                               type="button"
                             >
                               <Trash2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => onNotifyPatient(patient)}
+                              className="icon-btn"
+                              title="Notify patient"
+                              type="button"
+                              style={{ color: "#2E5895" }}
+                            >
+                              <MessageSquare size={14} />
                             </button>
                           </div>
                         </td>

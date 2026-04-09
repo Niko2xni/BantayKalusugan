@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import OcrScanner from "./OcrScanner";
+import { API_BASE_URL } from "../../utils/adminApi";
 
 const INITIAL_FORM = {
   firstName: "",
@@ -9,6 +11,7 @@ const INITIAL_FORM = {
   phone: "",
   address: "",
   email: "",
+  sourceDocumentUrl: "",
 };
 
 function validate(form) {
@@ -39,11 +42,13 @@ export default function PatientModal({
         phone: initialData.phone || "",
         address: initialData.address || "",
         email: initialData.email || "",
+        sourceDocumentUrl: "",
       };
     }
     return INITIAL_FORM;
   });
   const [errors, setErrors] = useState({});
+  const [ocrFilled, setOcrFilled] = useState(false);
 
   if (!isOpen) return null;
 
@@ -60,6 +65,22 @@ export default function PatientModal({
     await onSubmit(form);
   };
 
+  const handleOcrResult = (result) => {
+    const data = result.extractedData || {};
+    setForm((prev) => ({
+      ...prev,
+      firstName: data.firstName || prev.firstName,
+      lastName: data.lastName || prev.lastName,
+      date_of_birth: data.date_of_birth || prev.date_of_birth,
+      gender: data.gender || prev.gender,
+      phone: data.phone || prev.phone,
+      address: data.address || prev.address,
+      email: data.email || prev.email,
+      sourceDocumentUrl: result.imageUrl || "",
+    }));
+    setOcrFilled(true);
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal-box">
@@ -72,6 +93,23 @@ export default function PatientModal({
           </button>
         </div>
 
+        {/* OCR Scanner — only show for "add" mode */}
+        {mode !== "edit" && (
+          <div className="ocr-section">
+            <OcrScanner
+              scanEndpoint="/api/admin/ocr/scan-patient"
+              apiBaseUrl={API_BASE_URL}
+              buttonLabel="Scan Patient ID / Record"
+              onScanComplete={handleOcrResult}
+            />
+            {ocrFilled && (
+              <p className="ocr-success-msg">
+                ✓ Fields auto-filled from scan. Please review before saving.
+              </p>
+            )}
+          </div>
+        )}
+
         {submitError && <p className="modal-submit-error">{submitError}</p>}
 
         <div className="modal-form-grid">
@@ -82,7 +120,7 @@ export default function PatientModal({
               placeholder="First name"
               value={form.firstName}
               onChange={(event) => handleChange("firstName", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.firstName ? " ocr-highlighted" : ""}`}
             />
             {errors.firstName && <p className="modal-inline-error">{errors.firstName}</p>}
           </div>
@@ -93,7 +131,7 @@ export default function PatientModal({
               placeholder="Last name"
               value={form.lastName}
               onChange={(event) => handleChange("lastName", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.lastName ? " ocr-highlighted" : ""}`}
             />
             {errors.lastName && <p className="modal-inline-error">{errors.lastName}</p>}
           </div>
@@ -104,7 +142,7 @@ export default function PatientModal({
               type="date"
               value={form.date_of_birth}
               onChange={(event) => handleChange("date_of_birth", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.date_of_birth ? " ocr-highlighted" : ""}`}
             />
             {errors.date_of_birth && (
               <p className="modal-inline-error">{errors.date_of_birth}</p>
@@ -115,7 +153,7 @@ export default function PatientModal({
             <select
               value={form.gender}
               onChange={(event) => handleChange("gender", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.gender ? " ocr-highlighted" : ""}`}
             >
               <option>Male</option>
               <option>Female</option>
@@ -129,7 +167,7 @@ export default function PatientModal({
               placeholder="Phone number"
               value={form.phone}
               onChange={(event) => handleChange("phone", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.phone ? " ocr-highlighted" : ""}`}
             />
             {errors.phone && <p className="modal-inline-error">{errors.phone}</p>}
           </div>
@@ -141,7 +179,7 @@ export default function PatientModal({
               placeholder="Barangay address"
               value={form.address}
               onChange={(event) => handleChange("address", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.address ? " ocr-highlighted" : ""}`}
             />
           </div>
 
@@ -152,7 +190,7 @@ export default function PatientModal({
               placeholder="Email address"
               value={form.email}
               onChange={(event) => handleChange("email", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.email ? " ocr-highlighted" : ""}`}
             />
           </div>
         </div>

@@ -10,6 +10,7 @@ import DeleteConfirmModal from "./components/admin-dashboard/DeleteConfirmModal"
 import OverviewPanel from "./components/admin-dashboard/OverviewPanel";
 import PanelErrorBoundary from "./components/admin-dashboard/PanelErrorBoundary";
 import PatientModal from "./components/admin-dashboard/PatientModal";
+import NotifyPatientModal from "./components/admin-dashboard/NotifyPatientModal";
 import PatientsPanel from "./components/admin-dashboard/PatientsPanel";
 import VitalDetailsModal from "./components/admin-dashboard/VitalDetailsModal";
 import VitalModal from "./components/admin-dashboard/VitalModal";
@@ -39,13 +40,19 @@ export default function AdminDashboard() {
 
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [showEditPatientModal, setShowEditPatientModal] = useState(false);
+  const [showNotifyPatientModal, setShowNotifyPatientModal] = useState(false);
   const [editingPatient, setEditingPatient] = useState(null);
+  const [notifyingPatient, setNotifyingPatient] = useState(null);
 
   const [showAddVitalModal, setShowAddVitalModal] = useState(false);
   const [showViewVitalModal, setShowViewVitalModal] = useState(false);
   const [selectedVital, setSelectedVital] = useState(null);
 
   const [patientSubmitState, setPatientSubmitState] = useState({
+    loading: false,
+    error: "",
+  });
+  const [notifySubmitState, setNotifySubmitState] = useState({
     loading: false,
     error: "",
   });
@@ -81,6 +88,7 @@ export default function AdminDashboard() {
     updateAppointmentStatus,
     getPatientLatestVitals,
     getVitalPatientName,
+    sendNotification,
   } = useAdminDashboardData();
 
   const pageTitle = useMemo(() => {
@@ -193,6 +201,25 @@ export default function AdminDashboard() {
     setPatientSubmitState({
       loading: false,
       error: result.error || "Failed to update patient",
+    });
+  };
+
+  const handleNotifyPatientSubmit = async (form) => {
+    setNotifySubmitState({ loading: true, error: "" });
+
+    const result = await sendNotification(form);
+
+    if (result.ok) {
+      setShowNotifyPatientModal(false);
+      setNotifyingPatient(null);
+      setNotifySubmitState({ loading: false, error: "" });
+      pushToast("success", "SMS Notification sent successfully.");
+      return;
+    }
+
+    setNotifySubmitState({
+      loading: false,
+      error: result.error || "Failed to send SMS",
     });
   };
 
@@ -399,6 +426,16 @@ export default function AdminDashboard() {
                 }}
                 onDeletePatient={handleRequestDeletePatient}
                 onViewPatientVitals={handleViewPatientVitals}
+                onNotifyPatient={(patient) => {
+                  setNotifyingPatient(patient);
+                  setNotifySubmitState({ loading: false, error: "" });
+                  setShowNotifyPatientModal(true);
+                }}
+                onOpenTestNotify={() => {
+                  setNotifyingPatient(null);
+                  setNotifySubmitState({ loading: false, error: "" });
+                  setShowNotifyPatientModal(true);
+                }}
                 isLoading={loading.patients || loading.vitals}
                 error={errors.patients || errors.vitals}
                 onRetry={() => {
@@ -470,6 +507,21 @@ export default function AdminDashboard() {
           onSubmit={handleEditPatientSubmit}
           isSubmitting={patientSubmitState.loading}
           submitError={patientSubmitState.error}
+        />
+      )}
+
+      {showNotifyPatientModal && (
+        <NotifyPatientModal
+          isOpen={showNotifyPatientModal}
+          patient={notifyingPatient}
+          onClose={() => {
+            setShowNotifyPatientModal(false);
+            setNotifyingPatient(null);
+            setNotifySubmitState({ loading: false, error: "" });
+          }}
+          onSubmit={handleNotifyPatientSubmit}
+          isSubmitting={notifySubmitState.loading}
+          submitError={notifySubmitState.error}
         />
       )}
 

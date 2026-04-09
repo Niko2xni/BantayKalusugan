@@ -54,6 +54,9 @@ class VitalSign(Base):
     # Who recorded the vital signs
     recorded_by = Column(String, default="Admin Staff")
 
+    # OCR paper trail — URL of the scanned source document (nullable)
+    source_document_url = Column(String, nullable=True)
+
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -68,6 +71,7 @@ class AuditLog(Base):
     target_id = Column(Integer, nullable=False)
     target_type = Column(String, nullable=False)
     details = Column(String, nullable=False)
+    source_document_url = Column(String, nullable=True)
 
 
 class AdminSetting(Base):

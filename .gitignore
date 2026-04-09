@@ -2,5 +2,6 @@ node_modules/
 dist/
 .env
 .vite/
+.vscode/
 package-lock.json
 settings.json

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import OcrScanner from "./OcrScanner";
+import { API_BASE_URL } from "../../utils/adminApi";
 
 const INITIAL_FORM = {
   patientId: "",
@@ -13,6 +15,7 @@ const INITIAL_FORM = {
   respiratoryRate: "",
   weight: "",
   height: "",
+  sourceDocumentUrl: "",
 };
 
 function validate(form) {
@@ -37,6 +40,7 @@ export default function VitalModal({
 }) {
   const [form, setForm] = useState(() => INITIAL_FORM);
   const [errors, setErrors] = useState({});
+  const [ocrFilled, setOcrFilled] = useState(false);
 
   if (!isOpen) return null;
 
@@ -53,6 +57,23 @@ export default function VitalModal({
     await onSubmit(form);
   };
 
+  const handleOcrResult = (result) => {
+    const data = result.extractedData || {};
+    setForm((prev) => ({
+      ...prev,
+      systolic: data.systolic || prev.systolic,
+      diastolic: data.diastolic || prev.diastolic,
+      heartRate: data.heartRate || prev.heartRate,
+      temperature: data.temperature || prev.temperature,
+      spO2: data.spO2 || prev.spO2,
+      respiratoryRate: data.respiratoryRate || prev.respiratoryRate,
+      weight: data.weight || prev.weight,
+      height: data.height || prev.height,
+      sourceDocumentUrl: result.imageUrl || "",
+    }));
+    setOcrFilled(true);
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal-box" style={{ maxWidth: "600px" }}>
@@ -61,6 +82,21 @@ export default function VitalModal({
           <button onClick={onClose} className="modal-close-btn" type="button">
             <X size={20} />
           </button>
+        </div>
+
+        {/* OCR Scanner */}
+        <div className="ocr-section">
+          <OcrScanner
+            scanEndpoint="/api/admin/ocr/scan-vitals"
+            apiBaseUrl={API_BASE_URL}
+            buttonLabel="Scan Vitals Document"
+            onScanComplete={handleOcrResult}
+          />
+          {ocrFilled && (
+            <p className="ocr-success-msg">
+              ✓ Fields auto-filled from scan. Please review before saving.
+            </p>
+          )}
         </div>
 
         {submitError && <p className="modal-submit-error">{submitError}</p>}
@@ -112,7 +148,7 @@ export default function VitalModal({
               placeholder="e.g., 120"
               value={form.systolic}
               onChange={(event) => handleChange("systolic", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.systolic ? " ocr-highlighted" : ""}`}
             />
             {errors.systolic && <p className="modal-inline-error">{errors.systolic}</p>}
           </div>
@@ -124,7 +160,7 @@ export default function VitalModal({
               placeholder="e.g., 80"
               value={form.diastolic}
               onChange={(event) => handleChange("diastolic", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.diastolic ? " ocr-highlighted" : ""}`}
             />
             {errors.diastolic && <p className="modal-inline-error">{errors.diastolic}</p>}
           </div>
@@ -136,7 +172,7 @@ export default function VitalModal({
               placeholder="e.g., 72"
               value={form.heartRate}
               onChange={(event) => handleChange("heartRate", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.heartRate ? " ocr-highlighted" : ""}`}
             />
             {errors.heartRate && <p className="modal-inline-error">{errors.heartRate}</p>}
           </div>
@@ -149,7 +185,7 @@ export default function VitalModal({
               placeholder="e.g., 36.5"
               value={form.temperature}
               onChange={(event) => handleChange("temperature", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.temperature ? " ocr-highlighted" : ""}`}
             />
             {errors.temperature && (
               <p className="modal-inline-error">{errors.temperature}</p>
@@ -163,7 +199,7 @@ export default function VitalModal({
               placeholder="e.g., 98"
               value={form.spO2}
               onChange={(event) => handleChange("spO2", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.spO2 ? " ocr-highlighted" : ""}`}
             />
           </div>
 
@@ -174,7 +210,7 @@ export default function VitalModal({
               placeholder="e.g., 16"
               value={form.respiratoryRate}
               onChange={(event) => handleChange("respiratoryRate", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.respiratoryRate ? " ocr-highlighted" : ""}`}
             />
           </div>
 
@@ -186,7 +222,7 @@ export default function VitalModal({
               placeholder="e.g., 65.5"
               value={form.weight}
               onChange={(event) => handleChange("weight", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.weight ? " ocr-highlighted" : ""}`}
             />
           </div>
 
@@ -198,7 +234,7 @@ export default function VitalModal({
               placeholder="e.g., 165"
               value={form.height}
               onChange={(event) => handleChange("height", event.target.value)}
-              className="modal-input"
+              className={`modal-input${ocrFilled && form.height ? " ocr-highlighted" : ""}`}
             />
           </div>
         </div>

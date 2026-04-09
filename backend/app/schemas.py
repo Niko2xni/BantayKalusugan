@@ -81,6 +81,7 @@ class VitalSignBase(BaseModel):
     weight: Optional[float] = 0
     height: Optional[float] = 0
     recorded_by: Optional[str] = "Admin Staff"
+    source_document_url: Optional[str] = None
 
 class VitalSignCreate(VitalSignBase):
     pass
@@ -123,6 +124,7 @@ class AuditLog(AuditLogBase):
     id: int
     admin_id: int
     timestamp: datetime
+    source_document_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -302,3 +304,24 @@ class ChatMessage(ChatMessageBase):
 class ChatMessageCreate(BaseModel):
     message: str
     channel: str = "support"
+
+
+# --- OCR Schemas ---
+
+class OcrVitalsResult(BaseModel):
+    extractedData: dict
+    imageUrl: str
+    rawText: str
+
+
+class OcrPatientResult(BaseModel):
+    extractedData: dict
+    imageUrl: str
+    rawText: str
+
+# --- SMS Notification Schemas ---
+
+class SMSNotificationRequest(BaseModel):
+    phone_number: str
+    message: str
+    patient_id: Optional[int] = None

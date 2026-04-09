@@ -371,6 +371,32 @@ export default function useAdminDashboardData() {
     [refreshAppointments]
   );
 
+  const sendNotification = useCallback(
+    async (payload) => {
+      try {
+        const response = await adminFetch("/api/admin/sms/send", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          return {
+            ok: false,
+            error: await readErrorMessage(response, "Failed to send SMS notification"),
+          };
+        }
+
+        return { ok: true, data: await response.json() };
+      } catch (error) {
+        if (error.message === AUTH_REDIRECT_ERROR) {
+          return { ok: false, error: "Session expired. Please sign in again." };
+        }
+        return { ok: false, error: error.message || "Failed to send SMS notification" };
+      }
+    },
+    []
+  );
+
   const getPatientLatestVitals = useCallback(
     (patientId) => {
       const patientVitals = vitalSigns
@@ -440,5 +466,6 @@ export default function useAdminDashboardData() {
     updateAppointmentStatus,
     getPatientLatestVitals,
     getVitalPatientName,
+    sendNotification,
   };
 }
