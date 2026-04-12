@@ -1,3 +1,4 @@
+import os
 from datetime import date
 
 from fastapi import FastAPI, Depends, HTTPException
@@ -24,11 +25,16 @@ app.include_router(sms_router.router)
 app.include_router(admin_docs_router.router)
 
 # --- CORS Configuration ---
-# This is REQUIRED for your React frontend (running on another port) to communicate with this backend.
-origins = [
-    "http://localhost:5173",  # Default Vite Dev Server port
-    "http://127.0.0.1:5173",
-]
+# Configure allowed frontend origins through FRONTEND_ORIGINS or FRONTEND_ORIGIN.
+# Example: FRONTEND_ORIGINS=https://your-app.onrender.com,https://your-custom-domain.com
+configured_origins = os.getenv("FRONTEND_ORIGINS") or os.getenv("FRONTEND_ORIGIN")
+if configured_origins:
+    origins = [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
+else:
+    origins = [
+        "http://localhost:5173",  # Default Vite Dev Server port
+        "http://127.0.0.1:5173",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
