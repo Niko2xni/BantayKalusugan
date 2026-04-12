@@ -8,6 +8,7 @@ import logo from "./assets/logo.svg";
 
 const bgImage = "https://cdn.britannica.com/81/196781-050-CA29F2C8/Manila.jpg";
 const NAV_LINKS = ["Home", "Services", "About Us"];
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 // ── Navbar ───────────────────────────────────────────────────────────────────
 function Navbar({ scrolled }) {
@@ -113,7 +114,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/login/", {
+      const response = await fetch(`${API_BASE_URL}/api/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
