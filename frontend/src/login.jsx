@@ -1,11 +1,14 @@
+import styles from './login.module.css';
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, MapPin, Phone, Facebook, Twitter, Instagram, Menu, X } from "lucide-react";
-import "./login.css";
-import logo from "./assets/logo.png";
+import { clearAuthSession, setStoredUser } from "./utils/authSession";
+
+import logo from "./assets/logo.svg";
 
 const bgImage = "https://cdn.britannica.com/81/196781-050-CA29F2C8/Manila.jpg";
 const NAV_LINKS = ["Home", "Services", "About Us"];
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 // ── Navbar ───────────────────────────────────────────────────────────────────
 function Navbar({ scrolled }) {
@@ -30,17 +33,17 @@ function Navbar({ scrolled }) {
 
   return (
     <>
-      <nav className={`navbar${scrolled ? " navbar--scrolled" : ""}`}>
-          <div className="navbar__logo">
+      <nav className={`${styles.navbar} ${scrolled ? styles["navbar--scrolled"] : ""}`}>
+          <div className={styles['navbar__logo']}>
             <img src={logo} alt="logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-            <span className="navbar__logo-text">BantayKalusugan</span>
+            <span className={styles['navbar__logo-text']}>BantayKalusugan</span>
           </div>
-        <ul className="navbar__links navbar__links--desktop">
+        <ul className={`${styles['navbar__links']} ${styles['navbar__links--desktop']}`}>
           {NAV_LINKS.map((link) => {
             const idMap = { Home: "home", Services: "services", "About Us": "about" };
             return (
               <li key={link}>
-                <a href="#" className="navbar__link"
+                <a href="#" className={styles['navbar__link']}
                   onClick={(e) => { e.preventDefault(); goToSection(idMap[link]); }}>
                   {link}
                 </a>
@@ -48,19 +51,19 @@ function Navbar({ scrolled }) {
             );
           })}
         </ul>
-        <button className="navbar__hamburger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
+        <button className={styles['navbar__hamburger']} onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </nav>
 
       {menuOpen && (
-        <div className="mobile-menu">
-          <ul className="mobile-menu__links">
+        <div className={styles['mobile-menu']}>
+          <ul className={styles['mobile-menu__links']}>
             {NAV_LINKS.map((link) => {
               const idMap = { Home: "home", Services: "services", "About Us": "about" };
               return (
                 <li key={link}>
-                  <a href="#" className="mobile-menu__link"
+                  <a href="#" className={styles['mobile-menu__link']}
                     onClick={(e) => { e.preventDefault(); goToSection(idMap[link]); }}>
                     {link}
                   </a>
@@ -89,42 +92,92 @@ export default function Login() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const handleLogin = () => {
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    // Clear previous errors
+    setError("");
+
+    // Client-side validation
     if (!email || !password) {
       setError("Please enter your email and password.");
       return;
     }
-    setError("");
-    alert("Login clicked!");
+
+    // Validate email format before sending to backend
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/login/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        clearAuthSession();
+        setError(data.detail || "Login failed. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Only navigate if we got a valid user back
+      if (data.user && data.access_token) {
+        setStoredUser(data.user);
+        localStorage.setItem("token", data.access_token);
+
+        // Route based on user role from the database
+        if (data.user.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
+        }
+      } else {
+        clearAuthSession();
+        setError("Login failed. Please try again.");
+        setLoading(false);
+      }
+    } catch {
+      setError("Unable to connect to the server. Please try again later.");
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="login-page">
+    <div className={styles['login-page']}>
       <Navbar scrolled={scrolled} />
 
-      <div className="login-bg-wrapper" style={{ marginTop: "64px" }}>
-        <div className="login-bg">
+      <div className={styles['login-bg-wrapper']} style={{ marginTop: "64px" }}>
+        <div className={styles['login-bg']}>
           <img
             src={bgImage}
             alt="Manila skyline"
             onError={(e) => { e.target.style.display = "none"; }}
           />
-          <div className="login-bg-overlay" />
+          <div className={styles['login-bg-overlay']} />
         </div>
 
-        <div className="login-card">
-          <div className="login-logo-block">
-            <p className="login-card-title">BantayKalusugan</p>
-            <p className="login-card-subtitle">Barangay Community Health Monitoring Platform</p>
+        <div className={styles['login-card']}>
+          <div className={styles['login-logo-block']}>
+            <p className={styles['login-card-title']}>BantayKalusugan</p>
+            <p className={styles['login-card-subtitle']}>Barangay Community Health Monitoring Platform</p>
           </div>
 
-          {error && <div className="login-error">{error}</div>}
+          {error && <div className={styles['login-error']}>{error}</div>}
 
-          <div className="login-form">
+          <div className={styles['login-form']}>
             <div>
-              <label className="form-field-label">Email Address</label>
-              <div className="form-input-row">
-                <Mail size={16} className="form-input-icon" />
+              <label className={styles['form-field-label']}>Email Address</label>
+              <div className={styles['form-input-row']}>
+                <Mail size={16} className={styles['form-input-icon']} />
                 <input
                   type="email"
                   placeholder="Enter email"
@@ -135,9 +188,9 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="form-field-label">Password</label>
-              <div className="form-input-row">
-                <Lock size={16} className="form-input-icon" />
+              <label className={styles['form-field-label']}>Password</label>
+              <div className={styles['form-input-row']}>
+                <Lock size={16} className={styles['form-input-icon']} />
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter password"
@@ -146,7 +199,7 @@ export default function Login() {
                 />
                 <button
                   type="button"
-                  className="form-toggle-btn"
+                  className={styles['form-toggle-btn']}
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -154,14 +207,14 @@ export default function Login() {
               </div>
             </div>
 
-            <a href="#" className="forgot-password-link">Forgot password?</a>
+            <a href="#" className={styles['forgot-password-link']}>Forgot password?</a>
 
-            <button className="login-submit-btn" onClick={handleLogin}>
-              Log In
+            <button className={styles['login-submit-btn']} onClick={handleLogin} disabled={loading}>
+              {loading ? "Logging in..." : "Log In"}
             </button>
           </div>
 
-          <div className="login-register-link">
+          <div className={styles['login-register-link']}>
             Don't have an account? <Link to="/register" style={{ color: "#2E5895" }}>Register</Link>
           </div>
         </div>
@@ -175,32 +228,32 @@ export default function Login() {
 // ── Footer Component ─────────────────────────────────────────────────────────
 function Footer() {
   return (
-    <footer className="footer">
-      <div className="footer-container">
-        <div className="footer-grid">
+    <footer className={styles['footer']}>
+      <div className={styles['footer-container']}>
+        <div className={styles['footer-grid']}>
 
-          <div className="footer-brand">
-            <div className="footer-brand-logo">
+          <div className={styles['footer-brand']}>
+            <div className={styles['footer-brand-logo']}>
                 <img src={logo} alt="logo" style={{ width: "24px", height: "24px", objectFit: "contain" }} />
-              <div className="footer-brand-name">
-                <span className="brand-primary">Bantay</span>
-                <span className="brand-accent">Kalusugan</span>
+              <div className={styles['footer-brand-name']}>
+                <span className={styles['brand-primary']}>Bantay</span>
+                <span className={styles['brand-accent']}>Kalusugan</span>
               </div>
             </div>
-            <p className="footer-brand-desc">
+            <p className={styles['footer-brand-desc']}>
               A web-based patient monitoring platform for barangay-level health
               data management and community wellness tracking.
             </p>
-            <div className="footer-socials">
-              <a href="#" className="footer-social-link"><Facebook size={15} /></a>
-              <a href="#" className="footer-social-link"><Twitter size={15} /></a>
-              <a href="#" className="footer-social-link"><Instagram size={15} /></a>
+            <div className={styles['footer-socials']}>
+              <a href="#" className={styles['footer-social-link']}><Facebook size={15} /></a>
+              <a href="#" className={styles['footer-social-link']}><Twitter size={15} /></a>
+              <a href="#" className={styles['footer-social-link']}><Instagram size={15} /></a>
             </div>
           </div>
 
           <div>
-            <p className="footer-col-title">Our Services</p>
-            <ul className="footer-link-list">
+            <p className={styles['footer-col-title']}>Our Services</p>
+            <ul className={styles['footer-link-list']}>
               {["Patient Registration", "Blood Pressure Monitoring", "Health Record Management", "Health Trend Analysis"].map((l) => (
                 <li key={l}><a href="#">{l}</a></li>
               ))}
@@ -208,8 +261,8 @@ function Footer() {
           </div>
 
           <div>
-            <p className="footer-col-title">Quick Links</p>
-            <ul className="footer-link-list">
+            <p className={styles['footer-col-title']}>Quick Links</p>
+            <ul className={styles['footer-link-list']}>
               {["Home", "Services", "About Us", "Contact"].map((l) => (
                 <li key={l}><a href="#">{l}</a></li>
               ))}
@@ -217,32 +270,32 @@ function Footer() {
           </div>
 
           <div>
-            <p className="footer-col-title">Contact Us</p>
-            <ul className="footer-contact-list">
-              <li className="footer-contact-item">
-                <MapPin size={15} className="footer-contact-icon" />
-                <span className="footer-contact-text">
+            <p className={styles['footer-col-title']}>Contact Us</p>
+            <ul className={styles['footer-contact-list']}>
+              <li className={styles['footer-contact-item']}>
+                <MapPin size={15} className={styles['footer-contact-icon']} />
+                <span className={styles['footer-contact-text']}>
                   Barangay Health Center,<br />Sample Barangay, City, Philippines
                 </span>
               </li>
-              <li className="footer-contact-item">
-                <Phone size={15} className="footer-contact-icon" />
-                <span className="footer-contact-text">+63 912 345 6789</span>
+              <li className={styles['footer-contact-item']}>
+                <Phone size={15} className={styles['footer-contact-icon']} />
+                <span className={styles['footer-contact-text']}>+63 912 345 6789</span>
               </li>
-              <li className="footer-contact-item">
-                <Mail size={15} className="footer-contact-icon" />
-                <span className="footer-contact-text">info@bantaykalusugan.ph</span>
+              <li className={styles['footer-contact-item']}>
+                <Mail size={15} className={styles['footer-contact-icon']} />
+                <span className={styles['footer-contact-text']}>info@bantaykalusugan.ph</span>
               </li>
             </ul>
           </div>
 
         </div>
 
-        <div className="footer-divider">
-          <p className="footer-copyright">
+        <div className={styles['footer-divider']}>
+          <p className={styles['footer-copyright']}>
             © {new Date().getFullYear()} BantayKalusugan. All rights reserved.
           </p>
-          <div className="footer-bottom-links">
+          <div className={styles['footer-bottom-links']}>
             <a href="#">Privacy Policy</a>
             <a href="#">Terms of Service</a>
           </div>
