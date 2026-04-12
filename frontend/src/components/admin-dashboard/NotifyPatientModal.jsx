@@ -39,11 +39,11 @@ export default function NotifyPatientModal({
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: "500px" }}>
+      <div className="modal-box" style={{ maxWidth: "500px" }}>
         <div className="modal-header">
           <h2 className="modal-title">
             <MessageSquare size={18} />
-            {patient ? `Notify ${patient.firstName} ${patient.lastName}` : "Send Test SMS Notification"}
+            {patient ? `Notify ${patient.firstName} ${patient.lastName}` : "Send SMS Notification"}
           </h2>
           <button className="modal-close-btn" onClick={onClose} type="button">
             <X size={18} />

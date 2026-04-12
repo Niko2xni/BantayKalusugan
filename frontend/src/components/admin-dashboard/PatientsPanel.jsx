@@ -57,7 +57,7 @@ export default function PatientsPanel({
             type="button"
           >
             <MessageSquare size={14} />
-            Test SMS
+            Send SMS
           </button>
           <button
             onClick={onRetry}

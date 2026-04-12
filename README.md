@@ -131,3 +131,11 @@ Standard users **cannot** register as admins on the public website for security 
   - Fixed a race condition in the camera feed where the video stream failed to attach before the element mounted.
   - Updated to use React `useEffect` for robust media stream synchronization.
 - **Audit Log Enhancements:** Integrated source document links into the Admin Audit Log details for full traceability.
+- **SMS Provider Migration:** Switched from SMS API PH to **Twilio** for improved delivery reliability.
+- **Twilio Integration:**
+  - Implemented official Twilio Python SDK in the backend router.
+  - Support for both `MESSAGING_SERVICE_SID` and `TWILIO_PHONE_NUMBER` for flexible sender identification.
+  - Automatic E.164 phone number normalization for Philippine mobile formats (e.g., `09...` to `+639...`).
+- **SMS UI Polishing:** 
+  - Redesigned the SMS modal with a standardized white box layout and professional styling.
+  - Refactored labels and buttons from "Test SMS" to **"Send SMS"** for better UX clarity.
