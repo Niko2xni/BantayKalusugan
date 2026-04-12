@@ -90,6 +90,75 @@ def upload_to_blob(file_bytes: bytes, original_filename: str) -> str:
     return blob_client.url
 
 
+def download_blob(blob_url: str) -> tuple[bytes, str]:
+    """Download a blob from Azure Storage by its full URL.
+
+    Returns (file_bytes, content_type).
+    """
+    client = _get_blob_client()
+
+    # Parse the blob URL to extract container and blob name.
+    # URL format: https://<account>.blob.core.windows.net/<container>/<blob_path>
+    from urllib.parse import urlparse
+
+    parsed = urlparse(blob_url)
+    # path starts with /<container>/<blob_path>
+    path_parts = parsed.path.lstrip("/").split("/", 1)
+    if len(path_parts) < 2:
+        raise ValueError(f"Cannot parse container/blob from URL: {blob_url}")
+
+    container_name = path_parts[0]
+    blob_name = path_parts[1]
+
+    blob_client = client.get_blob_client(container=container_name, blob=blob_name)
+    download_stream = blob_client.download_blob()
+    file_bytes = download_stream.readall()
+
+    # Try to read content type from blob properties
+    properties = blob_client.get_blob_properties()
+    content_type = properties.content_settings.content_type or "application/octet-stream"
+
+    return file_bytes, content_type
+
+def generate_blob_sas_url(blob_url: str) -> str:
+    """Generate a temporary SAS URL for a blob."""
+    from urllib.parse import urlparse
+    from azure.storage.blob import generate_blob_sas, BlobSasPermissions
+    from datetime import datetime, timedelta
+
+    client = _get_blob_client()
+    parsed = urlparse(blob_url)
+    path_parts = parsed.path.lstrip("/").split("/", 1)
+    if len(path_parts) < 2:
+        raise ValueError(f"Cannot parse container/blob from URL: {blob_url}")
+
+    container_name = path_parts[0]
+    blob_name = path_parts[1]
+    
+    # We need the connection string to extract the account key
+    # In earlier versions, this was easily accessible via client.credential, but parsing the string is safer
+    conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
+    account_key = None
+    for part in conn_str.split(";"):
+        if part.startswith("AccountKey="):
+            account_key = part.split("=", 1)[1]
+            break
+            
+    if not account_key:
+        raise ValueError("Could not find AccountKey in connection string to generate SAS.")
+
+    sas_token = generate_blob_sas(
+        account_name=client.account_name,
+        container_name=container_name,
+        blob_name=blob_name,
+        account_key=account_key,
+        permission=BlobSasPermissions(read=True),
+        expiry=datetime.utcnow() + timedelta(hours=1),
+    )
+
+    return f"{blob_url}?{sas_token}"
+
+
 # ---------------------------------------------------------------------------
 # Document Intelligence OCR
 # ---------------------------------------------------------------------------

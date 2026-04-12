@@ -10,6 +10,7 @@ from . import crud, models, schemas, security
 from .database import engine, get_db
 from .routers import ocr as ocr_router
 from .routers import sms as sms_router
+from .routers import admin_docs as admin_docs_router
 
 # Create all database tables (this is a simple way, but Alembic is better for production)
 # We will still set up Alembic, but this ensures tables exist for initial testing
@@ -20,6 +21,7 @@ app = FastAPI(title="BantayKalusugan API")
 # Include routers
 app.include_router(ocr_router.router)
 app.include_router(sms_router.router)
+app.include_router(admin_docs_router.router)
 
 # --- CORS Configuration ---
 # This is REQUIRED for your React frontend (running on another port) to communicate with this backend.

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Camera, Upload, X, Loader2, FileImage } from "lucide-react";
 
 /**
@@ -56,15 +56,23 @@ export default function OcrScanner({
         video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
+      // Note: Assignment to videoRef.current moved to useEffect to avoid race condition
       setCameraActive(true);
     } catch (err) {
       setError("Camera access denied. Please allow camera permissions or use file upload instead.");
     }
   }, []);
+
+  // ── Sync camera stream to <video> once it mounts ──
+  useEffect(() => {
+    if (cameraActive && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(err => {
+        console.error("Error playing camera stream:", err);
+        setError("Failed to start playback. Please try again.");
+      });
+    }
+  }, [cameraActive]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {

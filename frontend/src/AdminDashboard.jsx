@@ -160,6 +160,7 @@ export default function AdminDashboard() {
       sex: form.gender,
       address: form.address,
       barangay: "Unknown",
+      source_document_url: form.sourceDocumentUrl || null,
     });
 
     if (result.ok) {
@@ -188,6 +189,7 @@ export default function AdminDashboard() {
       date_of_birth: form.date_of_birth,
       sex: form.gender,
       address: form.address,
+      source_document_url: form.sourceDocumentUrl || null,
     });
 
     if (result.ok) {
@@ -247,6 +249,7 @@ export default function AdminDashboard() {
       respiratory_rate: safeParseInt(form.respiratoryRate),
       weight: safeParseFloat(form.weight),
       height: safeParseFloat(form.height),
+      source_document_url: form.sourceDocumentUrl || null,
     });
 
     if (result.ok) {

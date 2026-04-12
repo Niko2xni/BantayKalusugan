@@ -30,3 +30,16 @@ export async function adminFetch(path, options = {}) {
 
   return response;
 }
+
+/**
+ * Convert a raw Azure Blob URL into a backend-proxied URL that
+ * requires admin authentication.  Non-Azure URLs are returned as-is.
+ */
+export function getSecureDocumentUrl(rawUrl) {
+  if (!rawUrl) return null;
+  if (!rawUrl.includes("blob.core.windows.net")) return rawUrl;
+
+  const token = localStorage.getItem("token");
+  const encoded = encodeURIComponent(rawUrl);
+  return `${API_BASE_URL}/api/admin/documents/view?url=${encoded}&token=${token}`;
+}

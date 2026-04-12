@@ -894,7 +894,7 @@ def get_help_articles():
 
 # --- Audit Logs ---
 
-def create_audit_log(db: Session, admin_id: int, action: str, target_id: int, target_type: str, details: str):
+def create_audit_log(db: Session, admin_id: int, action: str, target_id: int, target_type: str, details: str, source_document_url: str | None = None):
     # Verify admin_id exists to avoid ForeignKeyViolation
     admin = db.query(models.User).filter(models.User.id == admin_id, models.User.role == "admin").first()
     if not admin:
@@ -910,7 +910,8 @@ def create_audit_log(db: Session, admin_id: int, action: str, target_id: int, ta
         action=action,
         target_id=target_id,
         target_type=target_type,
-        details=details
+        details=details,
+        source_document_url=source_document_url
     )
     db.add(db_log)
     db.commit()
@@ -942,6 +943,7 @@ def get_paginated_audit_logs(
             models.AuditLog.target_id,
             models.AuditLog.target_type,
             models.AuditLog.details,
+            models.AuditLog.source_document_url,
             models.User.first_name.label("admin_first_name"),
             models.User.last_name.label("admin_last_name"),
         )
@@ -1006,6 +1008,7 @@ def get_paginated_audit_logs(
             "target_id": row.target_id,
             "target_type": row.target_type,
             "details": row.details,
+            "source_document_url": row.source_document_url,
             "admin_name": admin_name,
             "target_name": patient_name_map.get(row.target_id) if row.target_type == "Patient Record" else None,
         }
@@ -1043,7 +1046,8 @@ def create_user_admin(db: Session, user: schemas.AdminUserCreate, admin_id: int)
         action="Added",
         target_id=db_user.id,
         target_type="Patient Record",
-        details=f"Added patient {user.first_name} {user.last_name}"
+        details=f"Added patient {user.first_name} {user.last_name}",
+        source_document_url=user.source_document_url
     )
     return db_user
 
@@ -1053,19 +1057,23 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate, admi
         return None
     
     update_data = user_update.model_dump(exclude_unset=True)
+    doc_url = update_data.pop("source_document_url", None)
+    
     if update_data:
         for key, value in update_data.items():
             setattr(db_user, key, value)
         db.commit()
         db.refresh(db_user)
 
+    if update_data or doc_url:
         create_audit_log(
             db=db,
             admin_id=admin_id,
             action="Updated",
             target_id=db_user.id,
             target_type="Patient Record",
-            details=f"Updated patient details for {db_user.first_name} {db_user.last_name}"
+            details=f"Updated patient details for {db_user.first_name} {db_user.last_name}",
+            source_document_url=doc_url
         )
     return db_user
 
@@ -1105,6 +1113,7 @@ def create_vital_sign(db: Session, vital: schemas.VitalSignCreate, admin_id: int
         weight=vital.weight,
         height=vital.height,
         recorded_by=vital.recorded_by,
+        source_document_url=vital.source_document_url,
     )
     db.add(db_vital)
     db.commit()
@@ -1116,7 +1125,8 @@ def create_vital_sign(db: Session, vital: schemas.VitalSignCreate, admin_id: int
         action="Added",
         target_id=db_vital.id,
         target_type="Vital Signs",
-        details=f"Recorded vital signs for Patient {vital.patient_id}: BP {vital.systolic}/{vital.diastolic}, HR {vital.heart_rate}"
+        details=f"Recorded vital signs for Patient {vital.patient_id}: BP {vital.systolic}/{vital.diastolic}, HR {vital.heart_rate}",
+        source_document_url=vital.source_document_url
     )
 
     return db_vital

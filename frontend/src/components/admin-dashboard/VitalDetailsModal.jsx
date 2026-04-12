@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { getStatus, calculateBMI } from "./dashboardUtils";
+import { getSecureDocumentUrl } from "../../utils/adminApi";
 
 export default function VitalDetailsModal({ vital, onClose }) {
   if (!vital) return null;
@@ -70,6 +71,20 @@ export default function VitalDetailsModal({ vital, onClose }) {
             <h4 className="vital-modal-card-title">Overall Blood Pressure Status</h4>
             <StatusBadge status={overallStatus} />
           </div>
+
+          {vital.sourceDocumentUrl && (
+            <div className="vital-modal-card" style={{ gridColumn: "1 / -1" }}>
+              <h4 className="vital-modal-card-title">Source Document</h4>
+              <a
+                href={getSecureDocumentUrl(vital.sourceDocumentUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: "0.875rem", color: "#2E5895", fontWeight: 600, textDecoration: "underline" }}
+              >
+                View Scanned Document
+              </a>
+            </div>
+          )}
         </div>
 
         <div className="modal-footer">

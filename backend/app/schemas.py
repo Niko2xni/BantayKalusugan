@@ -21,7 +21,7 @@ class UserCreate(UserBase):
 
 # Schema for admin creating a new user (admin doesn't set password)
 class AdminUserCreate(UserBase):
-    pass
+    source_document_url: Optional[str] = None
 
 # Schema for updating a user
 class UserUpdate(BaseModel):
@@ -33,6 +33,7 @@ class UserUpdate(BaseModel):
     sex: Optional[str] = None
     address: Optional[str] = None
     barangay: Optional[str] = None
+    source_document_url: Optional[str] = None
 
 
 class CurrentUserUpdate(BaseModel):

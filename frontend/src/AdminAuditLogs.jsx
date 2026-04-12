@@ -3,7 +3,7 @@ import "./AdminDashboard.css";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminProfileLink from "./components/AdminProfileLink";
 import AdminNotificationsDropdown from "./components/admin-dashboard/AdminNotificationsDropdown";
-import { adminFetch, AUTH_REDIRECT_ERROR } from "./utils/adminApi";
+import { adminFetch, AUTH_REDIRECT_ERROR, getSecureDocumentUrl } from "./utils/adminApi";
 import {
   Search,
   Filter,
@@ -114,6 +114,7 @@ export default function AdminAuditLogs() {
             recordType: log.target_type,
             details: log.details,
             ipAddress: "N/A",
+            sourceDocumentUrl: log.source_document_url || null,
           };
         });
 
@@ -501,6 +502,20 @@ export default function AdminAuditLogs() {
                   {selectedLog.details}
                 </div>
               </div>
+
+              {selectedLog.sourceDocumentUrl && (
+                <div>
+                  <label style={{ display: "block", fontSize: "0.75rem", marginBottom: "0.25rem", color: "#888", fontWeight: 600 }}>Source Document</label>
+                  <a
+                    href={getSecureDocumentUrl(selectedLog.sourceDocumentUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: "0.875rem", color: "#2E5895", fontWeight: 600, textDecoration: "underline" }}
+                  >
+                    View Scanned Document
+                  </a>
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: "1.5rem", display: "flex", justifyContent: "flex-end" }}>

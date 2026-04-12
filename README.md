@@ -120,3 +120,14 @@ Standard users **cannot** register as admins on the public website for security 
 4. You will be greeted by name dynamically based on your registered data. 
 5. Under **Schedules/Analytics**, you can view your personal health summary logic.
 6. **Security:** If you attempt to type `/admin` into your URL bar, the system protects the data and instantly bounces you back to your personal dashboard!
+
+---
+
+## 📝 Recent Updates (vs Remote Origin)
+
+- **Secure Document Access:** Implemented Azure SAS token generation to allow authenticated admins to view source documents securely despite private blob storage settings.
+- **Admin Documents Router:** Added a dedicated proxy router for handling secure document redirects.
+- **Improved OCR Scanner:** 
+  - Fixed a race condition in the camera feed where the video stream failed to attach before the element mounted.
+  - Updated to use React `useEffect` for robust media stream synchronization.
+- **Audit Log Enhancements:** Integrated source document links into the Admin Audit Log details for full traceability.
