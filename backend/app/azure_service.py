@@ -13,11 +13,39 @@ import re
 import uuid
 from datetime import datetime
 from io import BytesIO
+from importlib import import_module
 
-from azure.storage.blob import BlobServiceClient, ContentSettings
-from azure.core.credentials import AzureKeyCredential
-from azure.ai.documentintelligence import DocumentIntelligenceClient
-from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
+try:
+    azure_blob = import_module("azure.storage.blob")
+    azure_credentials = import_module("azure.core.credentials")
+    azure_document_intelligence = import_module("azure.ai.documentintelligence")
+    azure_document_models = import_module("azure.ai.documentintelligence.models")
+except ImportError as exc:
+    BlobServiceClient = None
+    BlobSasPermissions = None
+    ContentSettings = None
+    generate_blob_sas = None
+    AzureKeyCredential = None
+    DocumentIntelligenceClient = None
+    AnalyzeDocumentRequest = None
+    _AZURE_IMPORT_ERROR = exc
+else:
+    BlobServiceClient = azure_blob.BlobServiceClient
+    BlobSasPermissions = azure_blob.BlobSasPermissions
+    ContentSettings = azure_blob.ContentSettings
+    generate_blob_sas = azure_blob.generate_blob_sas
+    AzureKeyCredential = azure_credentials.AzureKeyCredential
+    DocumentIntelligenceClient = azure_document_intelligence.DocumentIntelligenceClient
+    AnalyzeDocumentRequest = azure_document_models.AnalyzeDocumentRequest
+    _AZURE_IMPORT_ERROR = None
+
+
+def _require_azure_sdk(feature_name: str) -> None:
+    if _AZURE_IMPORT_ERROR is not None:
+        raise RuntimeError(
+            "Azure OCR support is unavailable because the Azure SDK packages are not installed. "
+            f"Install azure-core, azure-storage-blob, and azure-ai-documentintelligence before using {feature_name}."
+        ) from _AZURE_IMPORT_ERROR
 
 # ---------------------------------------------------------------------------
 # Azure Clients (lazy-init on first call)
@@ -30,6 +58,7 @@ _doc_intelligence_client = None
 def _get_blob_client():
     global _blob_service_client
     if _blob_service_client is None:
+        _require_azure_sdk("blob storage")
         conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
         if not conn_str:
             raise RuntimeError("AZURE_STORAGE_CONNECTION_STRING is not set")
@@ -40,6 +69,7 @@ def _get_blob_client():
 def _get_doc_intelligence_client():
     global _doc_intelligence_client
     if _doc_intelligence_client is None:
+        _require_azure_sdk("Azure Document Intelligence")
         endpoint = os.getenv("AZURE_OCR_ENDPOINT")
         key = os.getenv("AZURE_OCR_KEY")
         if not endpoint or not key:
@@ -57,6 +87,7 @@ def _get_doc_intelligence_client():
 
 def upload_to_blob(file_bytes: bytes, original_filename: str) -> str:
     """Upload an image to Azure Blob Storage and return the blob URL."""
+    _require_azure_sdk("blob uploads")
     container_name = os.getenv("AZURE_STORAGE_CONTAINER_NAME", "documents")
     client = _get_blob_client()
 
@@ -95,6 +126,7 @@ def download_blob(blob_url: str) -> tuple[bytes, str]:
 
     Returns (file_bytes, content_type).
     """
+    _require_azure_sdk("blob downloads")
     client = _get_blob_client()
 
     # Parse the blob URL to extract container and blob name.
@@ -122,8 +154,8 @@ def download_blob(blob_url: str) -> tuple[bytes, str]:
 
 def generate_blob_sas_url(blob_url: str) -> str:
     """Generate a temporary SAS URL for a blob."""
+    _require_azure_sdk("generating blob SAS URLs")
     from urllib.parse import urlparse
-    from azure.storage.blob import generate_blob_sas, BlobSasPermissions
     from datetime import datetime, timedelta
 
     client = _get_blob_client()
@@ -165,6 +197,7 @@ def generate_blob_sas_url(blob_url: str) -> str:
 
 def analyze_document(file_bytes: bytes) -> str:
     """Send an image to Azure Document Intelligence and return extracted text."""
+    _require_azure_sdk("OCR analysis")
     client = _get_doc_intelligence_client()
 
     poller = client.begin_analyze_document(
