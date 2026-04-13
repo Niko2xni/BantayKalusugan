@@ -61,34 +61,6 @@ class VitalSign(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
-class PatientVitalSubmission(Base):
-    __tablename__ = "patient_vital_submissions"
-
-    id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-
-    date = Column(String, nullable=False)
-    time = Column(String, nullable=False)
-    systolic = Column(Integer, nullable=False)
-    diastolic = Column(Integer, nullable=False)
-    heart_rate = Column(Integer, nullable=False)
-    temperature = Column(Float, nullable=False)
-    spo2 = Column(Integer, default=0)
-    respiratory_rate = Column(Integer, default=0)
-    weight = Column(Float, default=0)
-    height = Column(Float, default=0)
-
-    source_document_url = Column(String, nullable=True)
-
-    status = Column(String, nullable=False, default="pending", index=True)
-    admin_notes = Column(Text, nullable=True)
-    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    reviewed_at = Column(DateTime(timezone=True), nullable=True)
-
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 

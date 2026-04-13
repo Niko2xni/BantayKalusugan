@@ -52,13 +52,6 @@ def _serialize_vital(vital: models.VitalSign, patient_name: str):
     }
 
 
-def _serialize_submission(submission: models.PatientVitalSubmission, patient_name: str):
-    return {
-        **{column.name: getattr(submission, column.name) for column in submission.__table__.columns},
-        "patient_name": patient_name,
-    }
-
-
 # --- API Routes ---
 
 @app.get("/")
@@ -746,114 +739,6 @@ def change_admin_password(
 
 
 # --- Vital Signs Endpoints ---
-
-@app.post("/api/me/vitals/submissions", response_model=schemas.PatientVitalSubmission)
-def create_current_patient_vital_submission(
-    request: Request,
-    payload: schemas.PatientVitalSubmissionCreate,
-    db: Session = Depends(get_db),
-    current_patient: models.User = Depends(security.require_patient),
-):
-    rate_limit.enforce_rate_limit(
-        request,
-        scope="patient-vital-submission-create",
-        limit=12,
-        window_seconds=300,
-        identity=f"user:{current_patient.id}",
-    )
-
-    submission = crud.create_patient_vital_submission(db, current_patient, payload)
-    patient_name = f"{current_patient.first_name} {current_patient.last_name}".strip()
-    return _serialize_submission(submission, patient_name)
-
-
-@app.get("/api/me/vitals/submissions", response_model=List[schemas.PatientVitalSubmission])
-def read_current_patient_vital_submissions(
-    status: Literal["pending", "approved", "rejected"] | None = None,
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db),
-    current_patient: models.User = Depends(security.require_patient),
-):
-    submissions = crud.get_patient_vital_submissions(
-        db,
-        patient_id=current_patient.id,
-        status=status,
-        skip=skip,
-        limit=limit,
-    )
-    patient_name = f"{current_patient.first_name} {current_patient.last_name}".strip()
-    return [_serialize_submission(submission, patient_name) for submission in submissions]
-
-
-@app.get("/api/admin/vitals/submissions", response_model=List[schemas.PatientVitalSubmission])
-def read_admin_vital_submissions(
-    status: Literal["pending", "approved", "rejected"] | None = None,
-    skip: int = 0,
-    limit: int = 200,
-    db: Session = Depends(get_db),
-    current_admin: models.User = Depends(security.require_admin),
-):
-    submissions = crud.get_admin_vital_submissions(
-        db,
-        status=status,
-        skip=skip,
-        limit=limit,
-    )
-
-    patient_ids = [submission.patient_id for submission in submissions]
-    patient_map = {
-        patient.id: f"{patient.first_name} {patient.last_name}".strip()
-        for patient in db.query(models.User).filter(models.User.id.in_(patient_ids)).all()
-    } if patient_ids else {}
-
-    return [
-        _serialize_submission(
-            submission,
-            patient_map.get(submission.patient_id, "Unknown"),
-        )
-        for submission in submissions
-    ]
-
-
-@app.patch(
-    "/api/admin/vitals/submissions/{submission_id}/review",
-    response_model=schemas.PatientVitalSubmissionReviewResponse,
-)
-def review_admin_vital_submission(
-    submission_id: int,
-    request: Request,
-    payload: schemas.PatientVitalSubmissionReviewRequest,
-    db: Session = Depends(get_db),
-    current_admin: models.User = Depends(security.require_admin),
-):
-    rate_limit.enforce_rate_limit(
-        request,
-        scope="admin-vital-submission-review",
-        limit=60,
-        window_seconds=60,
-        identity=f"user:{current_admin.id}",
-    )
-
-    try:
-        submission, created_vital = crud.review_patient_vital_submission(
-            db,
-            current_admin=current_admin,
-            submission_id=submission_id,
-            payload=payload,
-        )
-    except ValueError as exc:
-        detail = str(exc)
-        status_code = 404 if "not found" in detail.lower() else 400
-        raise HTTPException(status_code=status_code, detail=detail)
-
-    patient = crud.get_user(db, user_id=submission.patient_id)
-    patient_name = f"{patient.first_name} {patient.last_name}".strip() if patient else "Unknown"
-
-    return {
-        "submission": _serialize_submission(submission, patient_name),
-        "created_vital": _serialize_vital(created_vital, patient_name) if created_vital else None,
-    }
 
 
 @app.post("/api/vitals/")

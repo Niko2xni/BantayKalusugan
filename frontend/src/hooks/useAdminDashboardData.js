@@ -86,42 +86,6 @@ function mapAppointment(appointment) {
   };
 }
 
-function toTitleCaseStatus(status) {
-  if (!status) return "Pending";
-  const normalized = String(status).trim().toLowerCase();
-  if (!normalized) return "Pending";
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
-function mapSubmission(submission) {
-  const sourceDateTime =
-    submission.created_at || `${submission.date || ""} ${submission.time || ""}`;
-
-  return {
-    id: `S-${String(submission.id).padStart(3, "0")}`,
-    dbId: submission.id,
-    patientDbId: submission.patient_id,
-    patientId: `P-${String(submission.patient_id).padStart(3, "0")}`,
-    patientName: submission.patient_name || "Unknown",
-    date: safeDatePart(sourceDateTime, submission.date || "N/A"),
-    time: safeTimePart(sourceDateTime, submission.time || "N/A"),
-    systolic: submission.systolic,
-    diastolic: submission.diastolic,
-    heartRate: submission.heart_rate,
-    temperature: submission.temperature,
-    spO2: submission.spo2,
-    respiratoryRate: submission.respiratory_rate,
-    weight: submission.weight,
-    height: submission.height,
-    status: toTitleCaseStatus(submission.status),
-    statusRaw: (submission.status || "pending").toLowerCase(),
-    adminNotes: submission.admin_notes || "",
-    reviewedBy: submission.reviewed_by,
-    reviewedAt: submission.reviewed_at || null,
-    sourceDocumentUrl: submission.source_document_url || null,
-  };
-}
-
 async function readErrorMessage(response, fallback) {
   try {
     const payload = await response.json();
@@ -134,7 +98,6 @@ async function readErrorMessage(response, fallback) {
 export default function useAdminDashboardData() {
   const [patients, setPatients] = useState([]);
   const [vitalSigns, setVitalSigns] = useState([]);
-  const [vitalSubmissions, setVitalSubmissions] = useState([]);
   const [appointmentsQueue, setAppointmentsQueue] = useState([]);
   const [bpTrendData, setBpTrendData] = useState([]);
   const [registrationsData, setRegistrationsData] = useState([]);
@@ -142,7 +105,6 @@ export default function useAdminDashboardData() {
   const [loading, setLoading] = useState({
     patients: true,
     vitals: true,
-    submissions: true,
     appointments: true,
     stats: true,
   });
@@ -150,7 +112,6 @@ export default function useAdminDashboardData() {
   const [errors, setErrors] = useState({
     patients: "",
     vitals: "",
-    submissions: "",
     appointments: "",
     stats: "",
   });
@@ -194,30 +155,6 @@ export default function useAdminDashboardData() {
       }
     } finally {
       setLoading((prev) => ({ ...prev, vitals: false }));
-    }
-  }, []);
-
-  const refreshVitalSubmissions = useCallback(async () => {
-    setLoading((prev) => ({ ...prev, submissions: true }));
-    setErrors((prev) => ({ ...prev, submissions: "" }));
-
-    try {
-      const response = await adminFetch("/api/admin/vitals/submissions?status=pending&limit=200");
-      if (!response.ok) {
-        throw new Error(await readErrorMessage(response, "Failed to fetch vital submissions"));
-      }
-
-      const data = await response.json();
-      setVitalSubmissions((data || []).map(mapSubmission));
-    } catch (error) {
-      if (error.message !== AUTH_REDIRECT_ERROR) {
-        setErrors((prev) => ({
-          ...prev,
-          submissions: error.message || "Failed to fetch vital submissions",
-        }));
-      }
-    } finally {
-      setLoading((prev) => ({ ...prev, submissions: false }));
     }
   }, []);
 
@@ -270,16 +207,9 @@ export default function useAdminDashboardData() {
   useEffect(() => {
     refreshPatients();
     refreshVitals();
-    refreshVitalSubmissions();
     refreshAppointments();
     refreshStats();
-  }, [
-    refreshPatients,
-    refreshVitals,
-    refreshVitalSubmissions,
-    refreshAppointments,
-    refreshStats,
-  ]);
+  }, [refreshPatients, refreshVitals, refreshAppointments, refreshStats]);
 
   const createPatient = useCallback(
     async (payload) => {
@@ -414,37 +344,6 @@ export default function useAdminDashboardData() {
     [refreshVitals, refreshStats]
   );
 
-  const reviewVitalSubmission = useCallback(
-    async (submissionId, payload) => {
-      try {
-        const response = await adminFetch(
-          `/api/admin/vitals/submissions/${submissionId}/review`,
-          {
-            method: "PATCH",
-            body: JSON.stringify(payload),
-          }
-        );
-
-        if (!response.ok) {
-          return {
-            ok: false,
-            error: await readErrorMessage(response, "Failed to review vital submission"),
-          };
-        }
-
-        const data = await response.json();
-        await Promise.all([refreshVitalSubmissions(), refreshVitals(), refreshStats()]);
-        return { ok: true, data };
-      } catch (error) {
-        if (error.message === AUTH_REDIRECT_ERROR) {
-          return { ok: false, error: "Session expired. Please sign in again." };
-        }
-        return { ok: false, error: error.message || "Failed to review vital submission" };
-      }
-    },
-    [refreshVitalSubmissions, refreshVitals, refreshStats]
-  );
-
   const updateAppointmentStatus = useCallback(
     async (appointmentId, payload) => {
       try {
@@ -549,7 +448,6 @@ export default function useAdminDashboardData() {
   return {
     patients,
     vitalSigns,
-    vitalSubmissions,
     appointmentsQueue,
     bpTrendData,
     registrationsData,
@@ -558,7 +456,6 @@ export default function useAdminDashboardData() {
     statsSummary,
     refreshPatients,
     refreshVitals,
-    refreshVitalSubmissions,
     refreshAppointments,
     refreshStats,
     createPatient,
@@ -566,7 +463,6 @@ export default function useAdminDashboardData() {
     deletePatient,
     createVital,
     deleteVital,
-    reviewVitalSubmission,
     updateAppointmentStatus,
     getPatientLatestVitals,
     getVitalPatientName,

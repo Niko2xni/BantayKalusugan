@@ -105,35 +105,6 @@ class VitalSign(VitalSignBase):
         from_attributes = True
 
 
-class PatientVitalSubmissionCreate(VitalMeasurementBase):
-    pass
-
-
-class PatientVitalSubmission(VitalMeasurementBase):
-    id: int
-    patient_id: int
-    status: Literal["pending", "approved", "rejected"]
-    admin_notes: Optional[str] = None
-    reviewed_by: Optional[int] = None
-    reviewed_at: Optional[datetime] = None
-    patient_name: Optional[str] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
-class PatientVitalSubmissionReviewRequest(BaseModel):
-    status: Literal["approved", "rejected"]
-    admin_notes: Optional[str] = None
-
-
-class PatientVitalSubmissionReviewResponse(BaseModel):
-    submission: PatientVitalSubmission
-    created_vital: Optional[VitalSign] = None
-
-
 class PatientAnalyticsOverview(BaseModel):
     total_records: int
     avg_systolic: float
