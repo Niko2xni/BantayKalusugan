@@ -106,3 +106,23 @@ export async function fetchHelpArticles() {
   const payload = await response.json();
   return Array.isArray(payload.items) ? payload.items : [];
 }
+
+export async function fetchVitalSubmissions(status = "") {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  const response = await userFetch(`/api/me/vitals/submissions${query}`);
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Unable to load submitted vitals."));
+  }
+  return response.json();
+}
+
+export async function createVitalSubmission(payload) {
+  const response = await userFetch("/api/me/vitals/submissions", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Unable to submit vital signs."));
+  }
+  return response.json();
+}

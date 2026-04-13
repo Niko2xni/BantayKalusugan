@@ -15,19 +15,31 @@ import { getStatus } from "./dashboardUtils";
 
 export default function VitalsPanel({
   vitalSigns,
+  vitalSubmissions,
   bpTrendData,
   getVitalPatientName,
+  onReviewSubmission,
   onOpenAddVital,
   onDeleteVital,
   onViewVital,
   isLoading,
   error,
+  submissionsLoading,
+  submissionsError,
+  reviewingSubmissionId,
   isStatsLoading,
   statsError,
   onRetryVitals,
+  onRetrySubmissions,
   onRetryStats,
 }) {
   const sortedVitals = [...vitalSigns].sort(
+    (a, b) =>
+      new Date(`${b.date} ${b.time}`).getTime() -
+      new Date(`${a.date} ${a.time}`).getTime()
+  );
+
+  const sortedSubmissions = [...(vitalSubmissions || [])].sort(
     (a, b) =>
       new Date(`${b.date} ${b.time}`).getTime() -
       new Date(`${a.date} ${a.time}`).getTime()
@@ -113,6 +125,104 @@ export default function VitalsPanel({
               />
             </LineChart>
           </ResponsiveContainer>
+        )}
+      </div>
+
+      <div className="table-card" style={{ marginBottom: "1.5rem" }}>
+        <div className="table-card-header">
+          <h3 className="table-card-title">Pending Patient Vital Submissions</h3>
+          <button
+            onClick={onRetrySubmissions}
+            className="table-action-btn secondary"
+            type="button"
+          >
+            Refresh Queue
+          </button>
+        </div>
+
+        {submissionsLoading ? (
+          <div style={{ padding: "1.5rem", color: "#666" }}>Loading submissions...</div>
+        ) : submissionsError ? (
+          <div style={{ padding: "1.5rem" }}>
+            <p style={{ color: "#C23B21", marginBottom: "0.75rem" }}>{submissionsError}</p>
+            <button className="table-action-btn secondary" onClick={onRetrySubmissions}>
+              Retry Submission Queue
+            </button>
+          </div>
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Submitted</th>
+                  <th>Patient</th>
+                  <th>BP</th>
+                  <th>HR</th>
+                  <th>Temp</th>
+                  <th>SpO₂</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedSubmissions.length === 0 && (
+                  <tr>
+                    <td colSpan={7}>No pending patient submissions.</td>
+                  </tr>
+                )}
+
+                {sortedSubmissions.map((submission) => {
+                  const isReviewing = reviewingSubmissionId === submission.dbId;
+
+                  return (
+                    <tr key={submission.id}>
+                      <td>
+                        <div className="patient-name">{submission.date}</div>
+                        <div className="patient-id">{submission.time}</div>
+                      </td>
+                      <td>
+                        <div className="patient-name">{submission.patientName}</div>
+                        <div className="patient-id">{submission.patientId}</div>
+                      </td>
+                      <td style={{ color: "#C23B21", fontWeight: 600 }}>
+                        {submission.systolic}/{submission.diastolic}
+                      </td>
+                      <td>{submission.heartRate} bpm</td>
+                      <td>{submission.temperature}°C</td>
+                      <td>{submission.spO2}%</td>
+                      <td>
+                        <div className="row-actions" style={{ flexWrap: "wrap" }}>
+                          <button
+                            className="table-action-btn"
+                            style={{ padding: "0.3rem 0.6rem", fontSize: "0.7rem" }}
+                            onClick={() => onReviewSubmission(submission, "approved")}
+                            disabled={isReviewing}
+                            type="button"
+                          >
+                            {isReviewing ? "Working..." : "Approve"}
+                          </button>
+                          <button
+                            className="table-action-btn secondary"
+                            style={{
+                              padding: "0.3rem 0.6rem",
+                              fontSize: "0.7rem",
+                              backgroundColor: "#fee2e2",
+                              borderColor: "#fecaca",
+                              color: "#991b1b",
+                            }}
+                            onClick={() => onReviewSubmission(submission, "rejected")}
+                            disabled={isReviewing}
+                            type="button"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

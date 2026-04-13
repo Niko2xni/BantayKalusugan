@@ -64,12 +64,14 @@ export default function AdminDashboard() {
   const [deleteDialog, setDeleteDialog] = useState({ type: "", item: null });
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [updatingAppointmentId, setUpdatingAppointmentId] = useState(null);
+  const [reviewingSubmissionId, setReviewingSubmissionId] = useState(null);
 
   const [toast, setToast] = useState(null);
 
   const {
     patients,
     vitalSigns,
+    vitalSubmissions,
     appointmentsQueue,
     bpTrendData,
     registrationsData,
@@ -78,6 +80,7 @@ export default function AdminDashboard() {
     statsSummary,
     refreshPatients,
     refreshVitals,
+    refreshVitalSubmissions,
     refreshAppointments,
     refreshStats,
     createPatient,
@@ -85,6 +88,7 @@ export default function AdminDashboard() {
     deletePatient,
     createVital,
     deleteVital,
+    reviewVitalSubmission,
     updateAppointmentStatus,
     getPatientLatestVitals,
     getVitalPatientName,
@@ -146,6 +150,38 @@ export default function AdminDashboard() {
     }
 
     pushToast("error", result.error || "Failed to update appointment status.");
+  };
+
+  const handleReviewVitalSubmission = async (submission, nextStatus) => {
+    if (!submission?.dbId) {
+      pushToast("error", "Unable to review submission: missing database identifier.");
+      return;
+    }
+
+    setReviewingSubmissionId(submission.dbId);
+
+    const result = await reviewVitalSubmission(submission.dbId, {
+      status: nextStatus,
+      admin_notes:
+        nextStatus === "approved"
+          ? "Approved and added to patient records."
+          : "Rejected by admin review. Please resubmit with accurate values.",
+    });
+
+    setReviewingSubmissionId(null);
+
+    if (result.ok) {
+      const actionLabel = nextStatus === "approved" ? "approved" : "rejected";
+      pushToast(
+        "success",
+        `Submission ${submission.id} ${actionLabel}${
+          nextStatus === "approved" ? " and patient record updated." : "."
+        }`
+      );
+      return;
+    }
+
+    pushToast("error", result.error || "Failed to review vital submission.");
   };
 
   const handleAddPatientSubmit = async (form) => {
@@ -454,13 +490,16 @@ export default function AdminDashboard() {
               title="Vitals panel failed"
               onReset={() => {
                 refreshVitals();
+                refreshVitalSubmissions();
                 refreshStats();
               }}
             >
               <VitalsPanel
                 vitalSigns={vitalSigns}
+                vitalSubmissions={vitalSubmissions}
                 bpTrendData={bpTrendData}
                 getVitalPatientName={getVitalPatientName}
+                onReviewSubmission={handleReviewVitalSubmission}
                 onOpenAddVital={() => {
                   setVitalSubmitState({ loading: false, error: "" });
                   setShowAddVitalModal(true);
@@ -472,9 +511,13 @@ export default function AdminDashboard() {
                 }}
                 isLoading={loading.vitals}
                 error={errors.vitals}
+                submissionsLoading={loading.submissions}
+                submissionsError={errors.submissions}
+                reviewingSubmissionId={reviewingSubmissionId}
                 isStatsLoading={loading.stats}
                 statsError={errors.stats}
                 onRetryVitals={refreshVitals}
+                onRetrySubmissions={refreshVitalSubmissions}
                 onRetryStats={refreshStats}
               />
             </PanelErrorBoundary>

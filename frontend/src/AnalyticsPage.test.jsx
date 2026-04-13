@@ -7,6 +7,8 @@ import AnalyticsPage from "./AnalyticsPage";
 const mockSetFilters = vi.fn();
 const mockReloadVitalsData = vi.fn();
 const mockExportVitalsFile = vi.fn();
+const mockFetchVitalSubmissions = vi.fn();
+const mockCreateVitalSubmission = vi.fn();
 
 vi.mock("./Layout.jsx", () => ({
   default: ({ children }) => <div>{children}</div>,
@@ -57,10 +59,17 @@ vi.mock("./hooks/usePatientVitalsData", () => ({
   }),
 }));
 
+vi.mock("./utils/patientPortalApi", () => ({
+  fetchVitalSubmissions: (...args) => mockFetchVitalSubmissions(...args),
+  createVitalSubmission: (...args) => mockCreateVitalSubmission(...args),
+}));
+
 describe("AnalyticsPage export", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockExportVitalsFile.mockResolvedValue(undefined);
+    mockFetchVitalSubmissions.mockResolvedValue([]);
+    mockCreateVitalSubmission.mockResolvedValue({ id: 1, status: "pending" });
   });
 
   it("exports CSV by default", async () => {

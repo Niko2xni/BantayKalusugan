@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional, List
+from pydantic import BaseModel, EmailStr, Field, model_validator
+from typing import Optional, List, Literal
 from datetime import date, datetime
 
 # --- User Schemas ---
@@ -69,20 +69,29 @@ class LoginResponse(BaseModel):
 
 # --- VitalSign Schemas ---
 
-class VitalSignBase(BaseModel):
-    patient_id: int
-    date: str
-    time: str
-    systolic: int
-    diastolic: int
-    heart_rate: int
-    temperature: float
-    spo2: Optional[int] = 0
-    respiratory_rate: Optional[int] = 0
-    weight: Optional[float] = 0
-    height: Optional[float] = 0
-    recorded_by: Optional[str] = "Admin Staff"
+class VitalMeasurementBase(BaseModel):
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    time: str = Field(pattern=r"^\d{2}:\d{2}$")
+    systolic: int = Field(ge=70, le=250)
+    diastolic: int = Field(ge=40, le=200)
+    heart_rate: int = Field(ge=30, le=250)
+    temperature: float = Field(ge=35.0, le=42.0)
+    spo2: Optional[int] = Field(default=0, ge=0, le=100)
+    respiratory_rate: Optional[int] = Field(default=0, ge=0, le=60)
+    weight: Optional[float] = Field(default=0, ge=0, le=400)
+    height: Optional[float] = Field(default=0, ge=0, le=300)
     source_document_url: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_blood_pressure(self):
+        if self.diastolic > self.systolic:
+            raise ValueError("Diastolic pressure cannot be greater than systolic pressure")
+        return self
+
+
+class VitalSignBase(VitalMeasurementBase):
+    patient_id: int
+    recorded_by: Optional[str] = "Admin Staff"
 
 class VitalSignCreate(VitalSignBase):
     pass
@@ -94,6 +103,35 @@ class VitalSign(VitalSignBase):
 
     class Config:
         from_attributes = True
+
+
+class PatientVitalSubmissionCreate(VitalMeasurementBase):
+    pass
+
+
+class PatientVitalSubmission(VitalMeasurementBase):
+    id: int
+    patient_id: int
+    status: Literal["pending", "approved", "rejected"]
+    admin_notes: Optional[str] = None
+    reviewed_by: Optional[int] = None
+    reviewed_at: Optional[datetime] = None
+    patient_name: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PatientVitalSubmissionReviewRequest(BaseModel):
+    status: Literal["approved", "rejected"]
+    admin_notes: Optional[str] = None
+
+
+class PatientVitalSubmissionReviewResponse(BaseModel):
+    submission: PatientVitalSubmission
+    created_vital: Optional[VitalSign] = None
 
 
 class PatientAnalyticsOverview(BaseModel):
