@@ -31,6 +31,38 @@ export default function OcrScanner({
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
 
+  // ── Submit image to backend ──
+  const submitImage = useCallback(async (file) => {
+    setIsScanning(true);
+    setError("");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${apiBaseUrl}${scanEndpoint}`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Server error ${res.status}`);
+      }
+
+      const result = await res.json();
+      onScanComplete(result);
+      setIsOpen(false);
+      setPreview(null);
+    } catch (err) {
+      setError(err.message || "Scan failed. Please try again or enter data manually.");
+    } finally {
+      setIsScanning(false);
+    }
+  }, [apiBaseUrl, onScanComplete, scanEndpoint]);
+
   // ── Upload via file picker / drag-drop ──
   const handleFile = useCallback(async (file) => {
     if (!file) return;
@@ -46,7 +78,7 @@ export default function OcrScanner({
     setPreview(URL.createObjectURL(file));
     setError("");
     await submitImage(file);
-  }, []);
+  }, [submitImage]);
 
   // ── Camera helpers ──
   const startCamera = useCallback(async () => {
@@ -58,7 +90,7 @@ export default function OcrScanner({
       streamRef.current = stream;
       // Note: Assignment to videoRef.current moved to useEffect to avoid race condition
       setCameraActive(true);
-    } catch (err) {
+    } catch {
       setError("Camera access denied. Please allow camera permissions or use file upload instead.");
     }
   }, []);
@@ -98,39 +130,7 @@ export default function OcrScanner({
       stopCamera();
       await submitImage(file);
     }, "image/jpeg", 0.9);
-  }, [stopCamera]);
-
-  // ── Submit image to backend ──
-  const submitImage = async (file) => {
-    setIsScanning(true);
-    setError("");
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${apiBaseUrl}${scanEndpoint}`, {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Server error ${res.status}`);
-      }
-
-      const result = await res.json();
-      onScanComplete(result);
-      setIsOpen(false);
-      setPreview(null);
-    } catch (err) {
-      setError(err.message || "Scan failed. Please try again or enter data manually.");
-    } finally {
-      setIsScanning(false);
-    }
-  };
+  }, [stopCamera, submitImage]);
 
   // ── Drag-and-drop ──
   const handleDragOver = (e) => {

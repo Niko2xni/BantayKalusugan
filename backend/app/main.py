@@ -1,13 +1,13 @@
 import os
 from datetime import date
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List, Literal, Optional
 
-from . import crud, models, schemas, security
+from . import crud, models, rate_limit, schemas, security
 from .database import engine, get_db
 from .routers import ocr as ocr_router
 from .routers import sms as sms_router
@@ -59,7 +59,13 @@ def read_root():
     return {"message": "Welcome to the BantayKalusugan API!"}
 
 @app.post("/api/users/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(
+    user: schemas.UserCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    rate_limit.enforce_rate_limit(request, scope="register", limit=15, window_seconds=300)
+
     if user.email.lower().endswith("@bantaykalusugan.com"):
         raise HTTPException(status_code=400, detail="This email domain is reserved for admin accounts. Please use a different email.")
     db_user = crud.get_user_by_email(db, email=user.email)
@@ -106,7 +112,20 @@ def read_user(
     return db_user
 
 @app.post("/api/login/", response_model=schemas.LoginResponse)
-def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
+def login(
+    login_data: schemas.LoginRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    rate_limit.enforce_rate_limit(request, scope="login-ip", limit=20, window_seconds=60)
+    rate_limit.enforce_rate_limit(
+        request,
+        scope="login-email",
+        limit=10,
+        window_seconds=60,
+        identity=login_data.email.strip().lower(),
+    )
+
     user = crud.authenticate_user(db, email=login_data.email, password=login_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -142,10 +161,19 @@ def update_current_user_profile(
 
 @app.post("/api/me/change-password", response_model=schemas.MessageResponse)
 def change_current_user_password(
+    request: Request,
     password_data: schemas.PasswordChangeRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(security.get_current_user),
 ):
+    rate_limit.enforce_rate_limit(
+        request,
+        scope="patient-change-password",
+        limit=8,
+        window_seconds=300,
+        identity=f"user:{current_user.id}",
+    )
+
     try:
         crud.change_user_password(db, current_user, password_data)
     except PermissionError as exc:
@@ -259,19 +287,36 @@ def read_current_patient_appointments(
 
 @app.post("/api/me/appointments/request", response_model=schemas.Appointment)
 def request_current_patient_appointment(
+    request: Request,
     payload: schemas.AppointmentRequestCreate,
     db: Session = Depends(get_db),
     current_patient: models.User = Depends(security.require_patient),
 ):
+    rate_limit.enforce_rate_limit(
+        request,
+        scope="patient-appointment-request",
+        limit=12,
+        window_seconds=300,
+        identity=f"user:{current_patient.id}",
+    )
     return crud.request_patient_appointment(db, current_patient, payload)
 
 
 @app.patch("/api/me/appointments/{appointment_id}/cancel", response_model=schemas.Appointment)
 def cancel_current_patient_appointment(
+    request: Request,
     appointment_id: int,
     db: Session = Depends(get_db),
     current_patient: models.User = Depends(security.require_patient),
 ):
+    rate_limit.enforce_rate_limit(
+        request,
+        scope="patient-appointment-cancel",
+        limit=20,
+        window_seconds=300,
+        identity=f"user:{current_patient.id}",
+    )
+
     try:
         return crud.cancel_patient_appointment(db, current_patient, appointment_id)
     except ValueError as exc:
@@ -282,11 +327,20 @@ def cancel_current_patient_appointment(
 
 @app.patch("/api/me/appointments/{appointment_id}/reschedule", response_model=schemas.Appointment)
 def reschedule_current_patient_appointment(
+    request: Request,
     appointment_id: int,
     payload: schemas.AppointmentRescheduleRequest,
     db: Session = Depends(get_db),
     current_patient: models.User = Depends(security.require_patient),
 ):
+    rate_limit.enforce_rate_limit(
+        request,
+        scope="patient-appointment-reschedule",
+        limit=15,
+        window_seconds=300,
+        identity=f"user:{current_patient.id}",
+    )
+
     try:
         return crud.reschedule_patient_appointment(db, current_patient, appointment_id, payload)
     except ValueError as exc:
@@ -410,10 +464,19 @@ def read_current_patient_chat_messages(
 
 @app.post("/api/me/chat/messages", response_model=List[schemas.ChatMessage])
 def create_current_patient_chat_message(
+    request: Request,
     payload: schemas.ChatMessageCreate,
     db: Session = Depends(get_db),
     current_patient: models.User = Depends(security.require_patient),
 ):
+    rate_limit.enforce_rate_limit(
+        request,
+        scope="patient-chat-send",
+        limit=30,
+        window_seconds=60,
+        identity=f"user:{current_patient.id}",
+    )
+
     try:
         return crud.create_chat_message_with_reply(db, user_id=current_patient.id, payload=payload)
     except ValueError as exc:
@@ -651,10 +714,19 @@ def update_admin_system_settings(
 
 @app.post("/api/admin/settings/change-password", response_model=schemas.MessageResponse)
 def change_admin_password(
+    request: Request,
     password_data: schemas.PasswordChangeRequest,
     db: Session = Depends(get_db),
     current_admin: models.User = Depends(security.require_admin),
 ):
+    rate_limit.enforce_rate_limit(
+        request,
+        scope="admin-change-password",
+        limit=8,
+        window_seconds=300,
+        identity=f"user:{current_admin.id}",
+    )
+
     try:
         crud.change_admin_password(db, current_admin, password_data)
     except PermissionError as exc:
@@ -667,6 +739,7 @@ def change_admin_password(
 
 
 # --- Vital Signs Endpoints ---
+
 
 @app.post("/api/vitals/")
 def create_vital_sign(

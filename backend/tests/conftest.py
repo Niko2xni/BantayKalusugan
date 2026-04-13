@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
 
 from app import models
+from app.rate_limit import reset_rate_limits
 from app.security import get_password_hash
 
 
@@ -37,6 +38,15 @@ def db_session(engine):
         session.close()
         transaction.rollback()
         connection.close()
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limit_state():
+    reset_rate_limits()
+    try:
+        yield
+    finally:
+        reset_rate_limits()
 
 
 @pytest.fixture()

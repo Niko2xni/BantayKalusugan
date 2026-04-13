@@ -1,5 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { MessageSquare, X, Send, Loader2 } from "lucide-react";
+
+function getDefaultMessage(patient) {
+  if (patient) {
+    return `Hi ${patient.firstName}, this is a reminder from BantayKalusugan for your upcoming checkup. Please reply or visit the clinic if you have questions.`;
+  }
+  return "This is a test notification from BantayKalusugan.";
+}
 
 export default function NotifyPatientModal({
   isOpen,
@@ -9,19 +16,8 @@ export default function NotifyPatientModal({
   isSubmitting,
   submitError,
 }) {
-  const [message, setMessage] = useState("");
-  const [phone, setPhone] = useState("");
-
-  useEffect(() => {
-    if (isOpen && patient) {
-      setPhone(patient.phone || "");
-      setMessage(`Hi ${patient.firstName}, this is a reminder from BantayKalusugan for your upcoming checkup. Please reply or visit the clinic if you have questions.`);
-    } else if (isOpen && !patient) {
-        // Testing mode without a patient selected
-        setPhone("");
-        setMessage("This is a test notification from BantayKalusugan.");
-    }
-  }, [isOpen, patient]);
+  const [message, setMessage] = useState(() => getDefaultMessage(patient));
+  const [phone, setPhone] = useState(() => patient?.phone || "");
 
   if (!isOpen) return null;
 
