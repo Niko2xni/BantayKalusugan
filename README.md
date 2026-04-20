@@ -5,6 +5,10 @@ BantayKalusugan is a full-stack health monitoring system with:
 - `backend/`: FastAPI + SQLAlchemy + Alembic
 - `frontend/`: React + Vite
 
+## Live Website
+
+The hosted frontend is available here: [bantaykalusugan.onrender.com](https://bantaykalusugan.onrender.com/)
+
 ## Prerequisites
 
 - Python 3.11+
