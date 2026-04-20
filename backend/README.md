@@ -2,6 +2,8 @@
 
 This folder contains the FastAPI backend used by the BantayKalusugan system.
 
+Hosted website: [bantaykalusugan.onrender.com](https://bantaykalusugan.onrender.com/)
+
 ## Prerequisites
 
 - Python 3.11+
