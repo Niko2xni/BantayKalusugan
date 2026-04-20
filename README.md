@@ -1,141 +1,112 @@
-# BantayKalusugan: Getting Started & User Setup Guide
+# BantayKalusugan
 
-Welcome to the **BantayKalusugan** platform! This guide will show you how to start the application on your computer and navigate through both the Patient and Admin interfaces.
+BantayKalusugan is a full-stack health monitoring system with:
 
----
+- `backend/`: FastAPI + SQLAlchemy + Alembic
+- `frontend/`: React + Vite
 
-## 🚀 Part 1: How to Start the Application
+## Prerequisites
 
-The application is split into two parts that must run at the same time: the **Backend Server** (FastAPI) and the **Frontend Website** (React/Vite). You will need to open **two separate terminal windows**.
+- Python 3.11+
+- Node.js 20+ and npm 10+
+- PostgreSQL database (Neon or local)
+- Windows PowerShell (commands below use PowerShell format)
 
-### Starting the Backend (Terminal 1)
-The backend handles the database, authentication, and data logic.
-1. Open a terminal and navigate to the project directory.
-2. Go into the `backend` folder:
-   ```bash
-   cd BantayKalusugan/backend
-   ```
-3. Activate the virtual environment (Windows PowerShell):
-   ```bash
-   venv\Scripts\activate.ps1
-   ```
-4. Start the server using Uvicorn:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-   *The server is now running at `http://localhost:8000`. Keep this window open.*
+## 1. Clone and Open the Project
 
-### Starting the Frontend Website (Terminal 2)
-The frontend handles the visuals and user interfaces.
-1. Open a *new* terminal window.
-2. Go into the `frontend` folder:
-   ```bash
-   cd BantayKalusugan/frontend
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-4. Look for the local URL in your terminal (usually `http://localhost:5173`) and open it in your web browser. Check carefully if it prompts `http://localhost:5174` or another port, and use that instead.
+```powershell
+Set-Location "<your-projects-folder>"
+git clone <your-repo-url>
+Set-Location .\BantayKalusugan
+```
 
-### Quality Checks (Optional But Recommended)
-You can run automated checks before release:
+## 2. Backend Setup
 
-1. Backend tests:
-   ```bash
-   cd BantayKalusugan/backend
-   venv\Scripts\python.exe -m pytest -q
-   ```
-2. Frontend checks:
-   ```bash
-   cd BantayKalusugan/frontend
-   npm run lint
-   npm run test
-   npm run build
-   ```
-3. Full smoke check from repo root (PowerShell):
-   ```bash
-   ./scripts/smoke_admin.ps1
-   ```
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+Set-Location .\backend
+pip install -r requirements.txt
+Copy-Item .env.example .env
+```
 
-### Seed Demo Data (Optional)
-If you want realistic sample data for the admin and patient screens, run the backend seed script:
+Update `backend/.env` with real values (minimum required):
 
-1. Go to the backend folder.
-2. Seed the database:
-   ```bash
-   python seed_database.py
-   ```
-3. Preview the planned inserts without writing changes:
-   ```bash
-   python seed_database.py --dry-run
-   ```
-4. Rebuild only the seed-owned rows and repopulate them:
-   ```bash
-   python seed_database.py --reset
-   ```
+- `DATABASE_URL`
+- `JWT_SECRET_KEY`
+- `FRONTEND_ORIGINS`
 
-The script seeds demo admins, patients, vitals, appointments, notifications, chat messages, admin settings, and sample audit logs.
+Run migrations:
 
----
+```powershell
+alembic upgrade head
+```
 
-## 👥 Part 2: Creating Accounts
+Start backend:
 
-There are strict rules separating Admins (Health Staff) and Patients. 
+```powershell
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
-### Creating an Admin Profile (Backend terminal only)
-Standard users **cannot** register as admins on the public website for security purposes. IT staff must provision admin accounts using a secure script.
+Backend is available at `http://localhost:8000`.
 
-1. In another terminal, go to the `backend` folder and activate `venv` (as shown above).
-2. Run the secure creation script:
-   ```bash
-   python create_admin.py
-   ```
-3. Follow the prompts. **Crucial rule:** The email address you input **MUST** end with `@bantaykalusugan.com`. 
+## 3. Frontend Setup
 
-### Registering a Normal Patient
-1. Go to your frontend website in the browser (e.g., `http://localhost:5173`).
-2. Click **Register** in the top right, or scroll to the login page and click the Register link.
-3. Fill out the health form fully. You must provide an 11-digit phone number starting with `09`, and your password must be at least 8 characters.
+Open a second terminal from the repository root:
 
----
+```powershell
+Set-Location .\frontend
+npm install
+Copy-Item .env.example .env
+```
 
-## 🧭 Part 3: Navigating the Application
+Set this value in `frontend/.env` for local development:
 
-### 🏥 For Admins (Barangay Health Staff)
-1. Go to the public Login page.
-2. Log in using the admin credentials you created via the Python script.
-3. Because you are an admin, the system routes you directly to `/admin` (The Admin Dashboard).
-4. **Dashboard:** View overall community blood pressure trends, high-risk patient counts, and monthly registration growth.
-5. **Patients Tab (Left Sidebar):** View the database of all registered patients. You can click the "Eye" to view their vitals, or the "Edit" pencil.
-6. **Vital Records (Left Sidebar):** This is where health tracking happens. 
-   - Click the **Add Vital Signs** button.
-   - Select a patient from the dropdown. 
-   - Input their BP, heart rate, temperature, etc., and save it to easily track community health!
+```text
+VITE_API_BASE_URL=http://localhost:8000
+```
 
-### 🧑‍🤝‍🧑 For Normal Patients
-1. Go to the public Login page.
-2. Log in using your registered credentials.
-3. Because you are a normal user, you are automatically routed to your personal `/dashboard`.
-4. You will be greeted by name dynamically based on your registered data. 
-5. Under **Schedules/Analytics**, you can view your personal health summary logic.
-6. **Security:** If you attempt to type `/admin` into your URL bar, the system protects the data and instantly bounces you back to your personal dashboard!
+Start frontend:
 
----
+```powershell
+npm run dev
+```
 
-## 📝 Recent Updates (vs Remote Origin)
+Frontend is usually available at `http://localhost:5173`.
 
-- **Secure Document Access:** Implemented Azure SAS token generation to allow authenticated admins to view source documents securely despite private blob storage settings.
-- **Admin Documents Router:** Added a dedicated proxy router for handling secure document redirects.
-- **Improved OCR Scanner:** 
-  - Fixed a race condition in the camera feed where the video stream failed to attach before the element mounted.
-  - Updated to use React `useEffect` for robust media stream synchronization.
-- **Audit Log Enhancements:** Integrated source document links into the Admin Audit Log details for full traceability.
-- **SMS Provider Migration:** Switched from SMS API PH to **Twilio** for improved delivery reliability.
-- **Twilio Integration:**
-  - Implemented official Twilio Python SDK in the backend router.
-  - Support for both `MESSAGING_SERVICE_SID` and `TWILIO_PHONE_NUMBER` for flexible sender identification.
-  - Automatic E.164 phone number normalization for Philippine mobile formats (e.g., `09...` to `+639...`).
-- **SMS UI Polishing:** 
-  - Redesigned the SMS modal with a standardized white box layout and professional styling.
-  - Refactored labels and buttons from "Test SMS" to **"Send SMS"** for better UX clarity.
+## 4. Run the System
+
+Keep both terminals running:
+
+- Terminal 1: backend server
+- Terminal 2: frontend dev server
+
+Then open the frontend URL in your browser and use the app.
+
+## 5. Optional Verification Commands
+
+Backend tests:
+
+```powershell
+Set-Location .\backend
+..\.venv\Scripts\python.exe -m pytest -q tests
+```
+
+Frontend checks:
+
+```powershell
+Set-Location .\frontend
+npm run lint
+npm run test -- --run
+npm run build
+```
+
+## 6. Create an Admin Account (Optional)
+
+From `backend/`:
+
+```powershell
+..\.venv\Scripts\python.exe create_admin.py
+```
+
+Use an email ending with `@bantaykalusugan.com` when creating admin accounts.
