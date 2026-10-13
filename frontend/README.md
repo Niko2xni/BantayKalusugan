@@ -1,16 +1,70 @@
-# React + Vite
+# BantayKalusugan Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The frontend for BantayKalusugan is a modern React application built with [Vite](https://vite.dev/), [React Router](https://reactrouter.com/), and [Recharts](https://recharts.org/).
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js 20+
+- npm 10+
+- A running BantayKalusugan backend server (default: `http://localhost:8000`)
 
-## React Compiler
+## Installation
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+From the `frontend` folder:
 
-## Expanding the ESLint configuration
+```powershell
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Environment Configuration
+
+Copy the example environment file:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Ensure `frontend/.env` points to your backend instance:
+
+```env
+# Local development:
+VITE_API_BASE_URL=http://localhost:8000
+
+# Production (e.g. Render):
+# VITE_API_BASE_URL=https://your-backend.onrender.com
+```
+
+## Running Locally
+
+Start the Vite development server:
+
+```powershell
+npm run dev
+```
+
+The application will be served at `http://localhost:5173`.
+
+## Available Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Starts the Vite dev server with hot module replacement (HMR) |
+| `npm run build` | Compiles the production build into `dist/` |
+| `npm run preview` | Previews the production build locally |
+| `npm run lint` | Runs ESLint across the codebase |
+| `npm run test` | Runs the Vitest test suite once (`vitest run`) |
+| `npm run test:watch` | Runs the Vitest test suite in interactive watch mode |
+
+## Testing
+
+Run tests and ensure components pass:
+
+```powershell
+npm run test
+```
+
+## Features & Modules
+
+- **Authentication**: Patient & Admin login, Registration, Protected routes
+- **Patient Portal**: Vitals tracking, Analytics, Chat, Appointment Schedules, User Profile
+- **Admin Dashboard**: Patient directory, Health reports, OCR paper trail management, Audit logs, and Admin settings

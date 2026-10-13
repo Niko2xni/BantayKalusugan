@@ -15,6 +15,9 @@ Hosted website: [bantaykalusugan.onrender.com](https://bantaykalusugan.onrender.
 Run these commands from the repository root:
 
 ```powershell
+# Optional: if PowerShell blocks virtual environment script execution, run:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 Set-Location .\backend
@@ -27,16 +30,38 @@ Create your backend environment file:
 Copy-Item .env.example .env
 ```
 
-Edit `.env` and set at least:
+Edit `.env` and configure settings:
 
-- `DATABASE_URL`
-- `JWT_SECRET_KEY`
-- `FRONTEND_ORIGINS`
+```env
+# Required for local development:
+DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
+JWT_SECRET_KEY=dev-secret-key-change-in-production
+FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+
+# Optional:
+# AZURE_STORAGE_CONNECTION_STRING=...
+# AZURE_STORAGE_CONTAINER_NAME=documents
+# AZURE_OCR_ENDPOINT=...
+# AZURE_OCR_KEY=...
+# TWILIO_ACCOUNT_SID=...
+# TWILIO_AUTH_TOKEN=...
+# TWILIO_PHONE_NUMBER=...
+```
 
 Run database migrations:
 
 ```powershell
 alembic upgrade head
+```
+
+*(Optional)* Create an initial admin or seed data:
+
+```powershell
+# Create admin account (email must end with @bantaykalusugan.com):
+..\.venv\Scripts\python.exe create_admin.py
+
+# Seed database with sample patients and vitals:
+..\.venv\Scripts\python.exe seed_database.py
 ```
 
 Start the backend server:

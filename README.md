@@ -27,6 +27,9 @@ Set-Location .\BantayKalusugan
 ## 2. Backend Setup
 
 ```powershell
+# Optional: if PowerShell blocks virtual environment script execution, run:
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 Set-Location .\backend
@@ -34,13 +37,32 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Update `backend/.env` with real values (minimum required):
+Update `backend/.env` with your settings:
 
-- `DATABASE_URL`
-- `JWT_SECRET_KEY`
-- `FRONTEND_ORIGINS`
+```env
+# Required: PostgreSQL connection string (e.g. from Neon or local Postgres)
+DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
 
-Run migrations:
+# Required: Secret key for JWT authentication
+JWT_SECRET_KEY=dev-secret-key-change-in-production
+
+# Required: Allowed frontend origin(s) for CORS
+FRONTEND_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+
+# Optional: Azure Document Intelligence (OCR) & Azure Blob Storage
+# (Only needed if testing paper trail document uploads and OCR)
+# AZURE_STORAGE_CONNECTION_STRING=...
+# AZURE_STORAGE_CONTAINER_NAME=documents
+# AZURE_OCR_ENDPOINT=...
+# AZURE_OCR_KEY=...
+
+# Optional: Twilio SMS (Only needed if sending SMS alerts)
+# TWILIO_ACCOUNT_SID=...
+# TWILIO_AUTH_TOKEN=...
+# TWILIO_PHONE_NUMBER=...
+```
+
+Run migrations (ensure your database in `DATABASE_URL` is accessible):
 
 ```powershell
 alembic upgrade head
@@ -52,7 +74,9 @@ Start backend:
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Backend is available at `http://localhost:8000`.
+Backend URLs:
+- API Root: `http://localhost:8000`
+- Swagger Docs: `http://localhost:8000/docs`
 
 ## 3. Frontend Setup
 
@@ -82,12 +106,24 @@ Frontend is usually available at `http://localhost:5173`.
 
 Keep both terminals running:
 
-- Terminal 1: backend server
-- Terminal 2: frontend dev server
+- Terminal 1: backend server (`http://localhost:8000`)
+- Terminal 2: frontend dev server (`http://localhost:5173`)
 
-Then open the frontend URL in your browser and use the app.
+Then open `http://localhost:5173` in your browser.
 
-## 5. Optional Verification Commands
+## 5. Seed Data & Admin Account (Optional)
+
+From `backend/` with the virtual environment activated:
+
+```powershell
+# Create an admin account (email must end with @bantaykalusugan.com):
+..\.venv\Scripts\python.exe create_admin.py
+
+# Seed database with sample patients, vitals, and records for demo:
+..\.venv\Scripts\python.exe seed_database.py
+```
+
+## 6. Verification and Testing
 
 Backend tests:
 
@@ -104,13 +140,3 @@ npm run lint
 npm run test -- --run
 npm run build
 ```
-
-## 6. Create an Admin Account (Optional)
-
-From `backend/`:
-
-```powershell
-..\.venv\Scripts\python.exe create_admin.py
-```
-
-Use an email ending with `@bantaykalusugan.com` when creating admin accounts.
